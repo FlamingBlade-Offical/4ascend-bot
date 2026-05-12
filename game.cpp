@@ -318,68 +318,6 @@ void GameState::generate_plant() {
         just_unascend = true;
     }
 }
-
-// ================= AI 接口 =================
-GameState GameState::clone() const { return *this; }
-vector<pair<int, int>> GameState::get_legal_moves() const {
-    vector<pair<int, int>> moves;
-    for (int i = 0; i < N; ++i) for (int j = 0; j < N; ++j) if (board[i][j] == 0) moves.push_back({i, j});
-    return moves;
-}
-
-bool GameState::apply_move(int x, int y) {
-    if (!coords_check(x, y) || board[x][y] != 0) return false;
-    board[x][y] = player_turn;
-    turn_number++;
-    cnt[player_turn]++;
-    turn_pos[0] = x; turn_pos[1] = y;
-
-    if (ascend_check(x, y, player_turn)) {
-        if (ascend_turn == 0) {
-            ascend_turn = player_turn;
-            player_turn = 3 - player_turn;
-            ascend_status = 1;
-            return true;
-        }
-    }
-
-    if (ascend_turn) {
-        int decrease = 0;
-        for (auto& [cx, cy] : ascend_player[ascend_turn].slots) {
-            if (cx == x && cy == y) {
-                decrease = 1 + plants[cx][cy];
-                break;
-            }
-        }
-        ascend_player[ascend_turn].attack -= decrease;
-        int a1 = ascend_player[1].attack, a2 = ascend_player[2].attack;
-        if (a1 > a2) hp[2] -= a1 - a2;
-        else if (a2 > a1) hp[1] -= a2 - a1;
-        for (int i = 1; i <= 2; i++) for (auto& [cx, cy] : ascend_player[i].slots) plants[cx][cy] = 0;
-        cnt[1] -= ascend_player[1].slots.size();
-        cnt[2] -= ascend_player[2].slots.size();
-        ascend_player[1].init(); ascend_player[2].init();
-        ascend_status = 2;
-        generate_plant();
-        ascend_status = 0;
-        ascend_turn = 0;
-    } else {
-        generate_plant();
-    }
-    player_turn = 3 - player_turn;
-    return true;
-}
-
-void GameState::game() {
-    init();
-    while (true) {
-        int x, y; cin >> x >> y;
-        if (!coords_check(x, y) || board[x][y]) { cout << "invalid\n"; continue; }
-        apply_move(x, y);
-        if (game_end_check().first) break;
-    }
-}
-
 // ================= 训练模块 =================
 // encode, TrainingSample, self_play_one_game, play_one_game, apply_transform, main 等请使用你之前的稳定版本，不需要更改。
 
@@ -584,10 +522,10 @@ int main() {
         while (replay_buffer.size() > replay_capacity) {
             replay_buffer.erase(replay_buffer.begin());
         }
+        if (replay_buffer.size() < 512) continue;
         Network new_net = best_net;
         for (int epoch = 0; epoch < epochs; ++epoch) {
             // 如果缓冲区样本不足，等待下一轮
-            if (replay_buffer.size() < 512) continue;
 
             // 确定本次训练的批次大小（取缓冲区大小的 1/4 或固定值）
             int batch_size = std::min(1024, (int)replay_buffer.size());
