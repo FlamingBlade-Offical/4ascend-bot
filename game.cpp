@@ -487,7 +487,7 @@ int main() {
     }
 
     const int games_per_iter = 120;
-    const int eval_games = 150;
+    const int eval_games = 100;
     const int epochs = 5;
     int consecutive_accepts = 0;
     for (int iter = 0; ; ++iter) {
