@@ -7,10 +7,28 @@
 #include <future>
 #include <fstream>
 #include <cmath>
+#include <atomic>
+#include <chrono>
+#include <thread>
 using namespace std;
 
 thread_local std::mt19937 rng(std::random_device{}());
 thread_local std::uniform_int_distribution<int> dist(0, 1000000000);
+
+std::atomic<int> active_tasks{0};
+const int MAX_CONCURRENT = 6;   // 留两个核给系统
+
+template<typename F>
+auto launch_limited(F&& f) {
+    while (active_tasks >= MAX_CONCURRENT)
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    active_tasks++;
+    return std::async(std::launch::async, [f = std::forward<F>(f)]() {
+        auto result = f();
+        active_tasks--;
+        return result;
+    });
+}
 
 // ================= 基本规则 =================
 void GameState::init() {
@@ -22,6 +40,11 @@ void GameState::init() {
     ascend_player[1].init();
     ascend_player[2].init();
     init_plant();
+
+    uint32_t seed_aic = rng();
+    uint32_t seed_unity = rng();
+    rand_aic = RandAIC(seed_aic);
+    rand_unity = RandUnity(seed_unity);
 }
 
 void GameState::init_plant() {
@@ -474,7 +497,7 @@ int main() {
         std::cout << "No saved network, starting from scratch.\n";
     }
 
-    const int games_per_iter = 120;
+    const int games_per_iter = 80;
     const int eval_games = 100;
     const int epochs = 5;
     int consecutive_accepts = 0;
@@ -484,9 +507,10 @@ int main() {
         std::vector<std::future<std::vector<TrainingSample>>> self_play_futures;
         for (int g = 0; g < games_per_iter; ++g) {
             self_play_futures.emplace_back(
-                std::async(std::launch::async, self_play_one_game, std::ref(best_net), 2400)
+                launch_limited([&]() { return self_play_one_game(best_net, 2400); })
             );
         }
+
         for (auto& fut : self_play_futures) {
             auto game_data = fut.get();
             for (auto& sample : game_data) {
@@ -528,10 +552,10 @@ int main() {
         std::vector<std::future<int>> futures_black, futures_white;
         for (int g = 0; g < eval_games; ++g) {
             futures_black.emplace_back(
-                std::async(std::launch::async, play_one_game, std::ref(best_net), std::ref(new_net))
+                launch_limited([&]() { return play_one_game(best_net, new_net); })
             );
             futures_white.emplace_back(
-                std::async(std::launch::async, play_one_game, std::ref(new_net), std::ref(best_net))
+                launch_limited([&]() { return play_one_game(new_net, best_net); })
             );
         }
 

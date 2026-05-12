@@ -76,7 +76,8 @@ void expand(MCTSNode* leaf, Network& net) {
     leaf->expanded = true;
     for (auto& m : moves) {
         GameState next = leaf->state.clone();
-        next.apply_move(m.first, m.second);
+        if (!next.apply_move(m.first, m.second)) // ★ 必须检查
+            continue;
         int next_player = next.player_turn;
         MCTSNode* child = new MCTSNode(next, next_player, m, leaf);
         int idx = m.first * 9 + m.second;

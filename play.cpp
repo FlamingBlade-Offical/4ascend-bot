@@ -70,13 +70,13 @@ void GameState::print_board() {
 
         // 右侧：植物层独立显示（可选，为了更清晰）
         for (int j = 0; j < N; ++j) {
-            if (plants[i][j]) cout << "* ";
-            else              cout << ". ";
+            cout << plants[i][j] << " ";
         }
         cout << "\n";
     }
     cout << "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
 }
+
 // ================= 基本规则 =================
 void GameState::init() {
     hp[1] = hp[2] = 6;
@@ -87,6 +87,11 @@ void GameState::init() {
     ascend_player[1].init();
     ascend_player[2].init();
     init_plant();
+
+    uint32_t seed_aic = rng();
+    uint32_t seed_unity = rng();
+    rand_aic = RandAIC(seed_aic);
+    rand_unity = RandUnity(seed_unity);
 }
 
 void GameState::init_plant() {
@@ -100,6 +105,18 @@ void GameState::init_plant() {
     turn_pos[0] = turn_pos[1] = 0;
     turn_count_plant = 0;
     plant_stone_count = 0;
+}
+
+// ================= AI 接口 =================
+GameState GameState::clone() const { return *this; }
+
+std::vector<std::pair<int, int>> GameState::get_legal_moves() const {
+    std::vector<std::pair<int, int>> moves;
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+            if (board[i][j] == 0)
+                moves.push_back({i, j});
+    return moves;
 }
 
 int GameState::coords_check(int x, int y) { return x >= 0 && x < 9 && y >= 0 && y < 9; }
@@ -168,10 +185,9 @@ void GameState::p_sort_pos(vector<pair<int, int>>& pts) {
 }
 
 vector<pair<int, int>> GameState::p_scan_pos(bool flag3, bool flag4) {
-    // tst 使用1/2代表USED棋子
     vector<int> tst;
-    if (unascend_chargef[1] == 0) tst.push_back(1); // 白USED
-    if (unascend_chargef[2] == 0) tst.push_back(2); // 黑USED
+    if (unascend_chargef[1] == 0) tst.push_back(1);
+    if (unascend_chargef[2] == 0) tst.push_back(2);
     if (tst.empty()) { tst.push_back(1); tst.push_back(2); }
 
     vector<pair<int, int>> result;
@@ -187,7 +203,6 @@ vector<pair<int, int>> GameState::p_scan_pos(bool flag3, bool flag4) {
             bool filled = true;
             bool a = false;
             if (flag3) {
-                // stone 已经是1或2，可以直接放入tst检查
                 if (find(tst.begin(), tst.end(), stone) != tst.end() || (filled && (flag4 || over_status != 0))) a = true;
             } else a = filled;
             if (!a) continue;
@@ -208,12 +223,11 @@ vector<pair<int, int>> GameState::p_scan_pos(bool flag3, bool flag4) {
     return result;
 }
 
+// 修复：增加 self / foe 参数，不再从 player_turn 推断
 vector<pair<int, int>> GameState::p_scan_score(
     const vector<pair<int, int>>& points, bool atk, int count,
-    bool flag, bool flag2, bool flag4)
+    bool flag, bool flag2, bool flag4, int self, int foe)
 {
-    int self = get_player_index();          // 1或2
-    int foe = (self == 1) ? 2 : 1;          // 对手
     int tst[4] = {0}; int tst_len = 0;
     if (unascend_chargef[1] == 0) tst[tst_len++] = 1;
     if (unascend_chargef[2] == 0) tst[tst_len++] = 2;
@@ -310,7 +324,6 @@ vector<pair<int, int>> GameState::p_scan_score(
         int x = result[idx].x, y = result[idx].y;
         if (plants[x][y] < 2) {
             selected.push_back({x, y});
-            // bit 更新
             int bit = result[idx].bit;
             if (bit & 1) unascend_chargef[self] = max(unascend_chargef[self], 4);
             if (bit & 2) unascend_chargef[foe] = max(unascend_chargef[foe], 4);
@@ -321,8 +334,10 @@ vector<pair<int, int>> GameState::p_scan_score(
 
 void GameState::generate_plant() {
     turn_count_plant++;
-    int self = player_turn;              // 1或2
-    int foe = (self == 1) ? 2 : 1;
+    // ★ 核心修复：self 应为植物生成后即将行动的一方（3 - player_turn）
+    int self = 3 - player_turn;   // 即将落子方
+    int foe  = player_turn;       // 刚行动完的一方
+
     if (ascend_status == 1) return;
     bool atk = (ascend_status == 2);
 
@@ -341,20 +356,21 @@ void GameState::generate_plant() {
 
     int plant_count = (turn_count_plant >= 65) ? 3 : 2;
     if (plant_stone_count >= 44 && over_status == 0) over_status = 1;
-    if (over_status == 1 && hp[self] <= hp[foe]) over_status = 2;
+    if (over_status == 1 && hp[self] <= hp[foe]) over_status = 2; // 此处也改用 self/foe 而非 player_turn
     if (over_status != 0 && plant_stone_count < 22) over_status = 0;
 
     bool flag3 = atk;
     bool flag4 = atk && unascend_charge <= 0;
-    bool flag = unascend_chargef[self] > 0;
-    bool flag2 = unascend_chargef[foe] > 0;
-    if (unascend_chargef[self] > 0) atk = false;
+    bool flag = unascend_chargef[self] > 0;      // 修正：用 self 而非 player_turn
+    bool flag2 = unascend_chargef[foe] > 0;       // 修正：用 foe
+    if (unascend_chargef[self] > 0) atk = false;  // 修正
 
     auto cand = p_scan_pos(flag3, flag4);
     if (!cand.empty()) {
         if (over_status == 2) plant_count++;
         plant_count = min(plant_count, (int)cand.size());
-        auto selected = p_scan_score(cand, atk, plant_count, flag, flag2, flag4);
+        // 传入 self 和 foe
+        auto selected = p_scan_score(cand, atk, plant_count, flag, flag2, flag4, self, foe);
         for (auto& [x, y] : selected) plants[x][y]++;
     }
 
@@ -369,19 +385,11 @@ void GameState::generate_plant() {
         float val = 12.5f + unascend_charge + (25 - unascend_charge) * 0.4f;
         val = max(12.5f, min(val, 25.0f));
         unascend_charge = (int)ceil(val);
+        // ★ 充能始终加给 self（进攻方，即即将落子方），符合官方逻辑
         unascend_chargef[self] = max(unascend_chargef[self], (over_status != 0) ? 4 : 9);
         just_unascend = true;
     }
 }
-
-// ================= 新增供 AI 调用的方法 =================
-GameState GameState::clone() const { return *this; }
-vector<pair<int, int>> GameState::get_legal_moves() const {
-    vector<pair<int, int>> moves;
-    for (int i = 0; i < N; ++i) for (int j = 0; j < N; ++j) if (board[i][j] == 0) moves.push_back({i, j});
-    return moves;
-}
-
 bool GameState::apply_move(int x, int y) {
     if (!coords_check(x, y) || board[x][y] != 0) return false;
     board[x][y] = player_turn;
@@ -415,24 +423,14 @@ bool GameState::apply_move(int x, int y) {
         cnt[2] -= ascend_player[2].slots.size();
         ascend_player[1].init(); ascend_player[2].init();
         ascend_status = 2; // END
-        generate_plant();
+        generate_plant();          // ★ 此处 plant 生成时已使用修正后的 self
         ascend_status = 0;
         ascend_turn = 0;
     } else {
-        generate_plant();
+        generate_plant();          // 普通回合植物生成
     }
     player_turn = 3 - player_turn;
     return true;
-}
-
-void GameState::game() {
-    init();
-    while (true) {
-        int x, y; cin >> x >> y;
-        if (!coords_check(x, y) || board[x][y]) { cout << "invalid\n"; continue; }
-        apply_move(x, y);
-        if (game_end_check().first) break;
-    }
 }
 
 int main() {
