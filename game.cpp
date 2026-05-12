@@ -427,6 +427,11 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
         int x = sampled_idx / 9;
         int y = sampled_idx % 9;
         game.apply_move(x, y);
+        cout << "Turn " << game.turn_number
+        << " player " << game.player_turn
+        << " move (" << x << "," << y << ")"
+        << " cnt: " << game.cnt[1] << "/" << game.cnt[2]
+        << " hp: " << game.hp[1] << "/" << game.hp[2] << endl;
     }
 
     int winner = game.game_end_check().second;
@@ -435,6 +440,9 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
         float z = (state.player_turn == winner) ? 1.0f : -1.0f;
         samples.push_back({encode(state), pi, z});
     }
+    cout << "Winner: " << winner << " | z:";
+    for (auto& s : samples) cout << " " << s.z;
+    cout << endl;
     return samples;
 }
 
@@ -501,6 +509,7 @@ int main() {
     const int eval_games = 100;
     const int epochs = 5;
     int consecutive_accepts = 0;
+
     for (int iter = 0; ; ++iter) {
         float lr = std::max(0.0000005f, 0.00005f * (float)std::pow(0.75, iter / 5));
         std::vector<TrainingSample> all_data;
@@ -547,7 +556,7 @@ int main() {
             std::cout << "Iter " << iter << " Epoch " << epoch
                       << " avg loss: " << total_loss / batch_size << std::endl;
         }
-
+        std::cout << "Sample weight: " << new_net.layer1.W.at(0,0) << std::endl;
         int wins_black = 0, wins_white = 0;
         std::vector<std::future<int>> futures_black, futures_white;
         for (int g = 0; g < eval_games; ++g) {
