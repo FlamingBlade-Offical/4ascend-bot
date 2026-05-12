@@ -31,16 +31,16 @@ struct GameState {
         void init() { attack = 0; slots.clear(); }
     } ascend_player[3];
 
-    // ========== 官方植物系统状态（移植自 Game/GameTest） ==========
-    int grow_count = 11;                // 生长冷却计数 (C# 初始化 11)
-    int unascend_charge = 25;           // 非升段充能
-    int unascend_chargef[2] = {9, 9};   // 双方快速充能 [0]黑 [1]白
+    // ========== 官方植物系统状态（索引统一为1白2黑） ==========
+    int grow_count = 11;
+    int unascend_charge = 25;
+    int unascend_chargef[3] = {0, 9, 9};   // [1]白 [2]黑 （索引0闲置）
     bool just_unascend = false;
-    int over_status = 0;                // 0/1/2 对应 NONE/ENABLE/EXECUTE
-    int ascend_status = 0;              // 0/1/2 对应 NONE/START/END
-    int turn_pos[2] = {0, 0};           // 最近落子坐标
-    int turn_count_plant = 0;           // 植物系统用回合数
-    int plant_stone_count = 0;          // 当前棋子总数
+    int over_status = 0;                    // 0/1/2
+    int ascend_status = 0;                  // 0/1/2
+    int turn_pos[2] = {0, 0};               // [0]=x [1]=y (与玩家无关)
+    int turn_count_plant = 0;
+    int plant_stone_count = 0;
 
     // 植物评分用随机数发生器（与官方完全一致）
     struct RandAIC {
@@ -83,18 +83,18 @@ struct GameState {
         }
     } rand_unity;
 
-    // 植物用方向数组（官方顺序：上、下、左、右、左上、右下、左下、右上）
+    // 方向数组（官方顺序）
     int plant_dx[8] = {0, 0, -1, 1, -1, 1, -1, 1};
     int plant_dy[8] = {-1, 1, 0, 0, -1, 1, 1, -1};
 
-    // ========== 原有方法 ==========
+    // ========== 方法 ==========
     void init();
     void init_plant();
     void print_board();
     int coords_check(int x, int y);
     int ascend_check(int x, int y, int op);
     std::pair<int, int> game_end_check();
-    void generate_plant();       // 统一植物生长接口
+    void generate_plant();
     void game();
 
     GameState clone() const;
@@ -102,14 +102,13 @@ struct GameState {
     bool apply_move(int x, int y);
 
 private:
-    // 植物内部函数
     void get_align(int x, int y, int stone, int& max_align, int& max_align_total);
     std::vector<std::pair<int, int>> p_scan_pos(bool flag3, bool flag4);
     std::vector<std::pair<int, int>> p_scan_score(
         const std::vector<std::pair<int, int>>& points, bool atk, int count,
         bool flag, bool flag2, bool flag4);
     void p_sort_pos(std::vector<std::pair<int, int>>& pts);
-    int get_player_index() const { return (player_turn == 1) ? 1 : 0; } // 白->1 黑->0
+    int get_player_index() const { return player_turn; }   // 返回1或2
 };
 
 #endif

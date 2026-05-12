@@ -12,7 +12,7 @@ using namespace std;
 thread_local std::mt19937 rng(std::random_device{}());
 thread_local std::uniform_int_distribution<int> dist(0, 1000000000);
 
-// ================= 基本规则实现 =================
+// ================= 基本规则 =================
 void GameState::init() {
     hp[1] = hp[2] = 6;
     player_turn = 1;
@@ -27,7 +27,8 @@ void GameState::init() {
 void GameState::init_plant() {
     grow_count = 11;
     unascend_charge = 25;
-    unascend_chargef[0] = unascend_chargef[1] = 9;
+    unascend_chargef[1] = unascend_chargef[2] = 9;
+    unascend_chargef[0] = 0;
     just_unascend = false;
     over_status = 0;
     ascend_status = 0;
@@ -86,7 +87,7 @@ pair<int, int> GameState::game_end_check() {
     return {0, 0};
 }
 
-// ================= 官方植物系统（100%还原） =================
+// ================= 官方植物系统（玩家索引统一为1/2） =================
 void GameState::get_align(int x, int y, int stone, int& max_align, int& max_align_total) {
     int counts[8];
     for (int d = 0; d < 8; d++) {
@@ -112,9 +113,10 @@ void GameState::p_sort_pos(vector<pair<int, int>>& pts) {
 }
 
 vector<pair<int, int>> GameState::p_scan_pos(bool flag3, bool flag4) {
+    // tst 使用1/2代表USED棋子
     vector<int> tst;
-    if (unascend_chargef[0] == 0) tst.push_back(1); // BLACK_USED
-    if (unascend_chargef[1] == 0) tst.push_back(2); // WHITE_USED
+    if (unascend_chargef[1] == 0) tst.push_back(1); // 白USED
+    if (unascend_chargef[2] == 0) tst.push_back(2); // 黑USED
     if (tst.empty()) { tst.push_back(1); tst.push_back(2); }
 
     vector<pair<int, int>> result;
@@ -130,8 +132,8 @@ vector<pair<int, int>> GameState::p_scan_pos(bool flag3, bool flag4) {
             bool filled = true;
             bool a = false;
             if (flag3) {
-                int mapped = (stone == 1) ? 1 : 2;
-                if (find(tst.begin(), tst.end(), mapped) != tst.end() || (filled && (flag4 || over_status != 0))) a = true;
+                // stone 已经是1或2，可以直接放入tst检查
+                if (find(tst.begin(), tst.end(), stone) != tst.end() || (filled && (flag4 || over_status != 0))) a = true;
             } else a = filled;
             if (!a) continue;
 
@@ -155,12 +157,12 @@ vector<pair<int, int>> GameState::p_scan_score(
     const vector<pair<int, int>>& points, bool atk, int count,
     bool flag, bool flag2, bool flag4)
 {
-    int self = player_turn;          // 1=白, 2=黑
-    int foe = 3 - player_turn;
+    int self = get_player_index();          // 1或2
+    int foe = (self == 1) ? 2 : 1;          // 对手
     int tst[4] = {0}; int tst_len = 0;
     if (unascend_chargef[1] == 0) tst[tst_len++] = 1;
     if (unascend_chargef[2] == 0) tst[tst_len++] = 2;
-    if (tst_len == 0) { tst[0] = 1; tst[1] = 2; tst_len = 2; }
+    if (tst_len == 0) { tst[0]=1; tst[1]=2; tst_len=2; }
 
     struct Scored { int x, y, score, bit; };
     vector<Scored> result, buf;
@@ -170,8 +172,8 @@ vector<pair<int, int>> GameState::p_scan_score(
         int score = 500;
         bool flag5 = false, flag6 = atk;
         int abyte = 0;
-        int self_stone = (self == 0) ? 2 : 1; // 黑2 白1
-        int foe_stone = (self == 0) ? 1 : 2;
+        int self_stone = self;
+        int foe_stone = foe;
         int self_align, self_align_t, foe_align, foe_align_t;
         get_align(x, y, self_stone, self_align, self_align_t);
         get_align(x, y, foe_stone, foe_align, foe_align_t);
@@ -208,7 +210,7 @@ vector<pair<int, int>> GameState::p_scan_score(
         if (plants[x][y] != 0 && !flag4) score -= 30;
         else if (atk) {
             bool in_tst = false;
-            for (int i = 0; i < tst_len; i++) if (tst[i] == self_stone) in_tst = true;
+            for (int i = 0; i < tst_len; i++) if (tst[i] == self) in_tst = true;
             if (in_tst) score += 50;
         }
         score += rand_aic.nextInt(20);
@@ -253,8 +255,7 @@ vector<pair<int, int>> GameState::p_scan_score(
         int x = result[idx].x, y = result[idx].y;
         if (plants[x][y] < 2) {
             selected.push_back({x, y});
-
-            // ★ bit 更新（官方逻辑）
+            // bit 更新
             int bit = result[idx].bit;
             if (bit & 1) unascend_chargef[self] = max(unascend_chargef[self], 4);
             if (bit & 2) unascend_chargef[foe] = max(unascend_chargef[foe], 4);
@@ -265,8 +266,8 @@ vector<pair<int, int>> GameState::p_scan_score(
 
 void GameState::generate_plant() {
     turn_count_plant++;
-    int self = player_turn;          // 1=白, 2=黑
-    int foe = 3 - player_turn;
+    int self = player_turn;              // 1或2
+    int foe = (self == 1) ? 2 : 1;
     if (ascend_status == 1) return;
     bool atk = (ascend_status == 2);
 
@@ -311,12 +312,76 @@ void GameState::generate_plant() {
 
     if (atk) {
         float val = 12.5f + unascend_charge + (25 - unascend_charge) * 0.4f;
-        val = max(12.5f, min(val, 25.0f)); // mmx
+        val = max(12.5f, min(val, 25.0f));
         unascend_charge = (int)ceil(val);
         unascend_chargef[self] = max(unascend_chargef[self], (over_status != 0) ? 4 : 9);
         just_unascend = true;
     }
 }
+
+// ================= AI 接口 =================
+GameState GameState::clone() const { return *this; }
+vector<pair<int, int>> GameState::get_legal_moves() const {
+    vector<pair<int, int>> moves;
+    for (int i = 0; i < N; ++i) for (int j = 0; j < N; ++j) if (board[i][j] == 0) moves.push_back({i, j});
+    return moves;
+}
+
+bool GameState::apply_move(int x, int y) {
+    if (!coords_check(x, y) || board[x][y] != 0) return false;
+    board[x][y] = player_turn;
+    turn_number++;
+    cnt[player_turn]++;
+    turn_pos[0] = x; turn_pos[1] = y;
+
+    if (ascend_check(x, y, player_turn)) {
+        if (ascend_turn == 0) {
+            ascend_turn = player_turn;
+            player_turn = 3 - player_turn;
+            ascend_status = 1;
+            return true;
+        }
+    }
+
+    if (ascend_turn) {
+        int decrease = 0;
+        for (auto& [cx, cy] : ascend_player[ascend_turn].slots) {
+            if (cx == x && cy == y) {
+                decrease = 1 + plants[cx][cy];
+                break;
+            }
+        }
+        ascend_player[ascend_turn].attack -= decrease;
+        int a1 = ascend_player[1].attack, a2 = ascend_player[2].attack;
+        if (a1 > a2) hp[2] -= a1 - a2;
+        else if (a2 > a1) hp[1] -= a2 - a1;
+        for (int i = 1; i <= 2; i++) for (auto& [cx, cy] : ascend_player[i].slots) plants[cx][cy] = 0;
+        cnt[1] -= ascend_player[1].slots.size();
+        cnt[2] -= ascend_player[2].slots.size();
+        ascend_player[1].init(); ascend_player[2].init();
+        ascend_status = 2;
+        generate_plant();
+        ascend_status = 0;
+        ascend_turn = 0;
+    } else {
+        generate_plant();
+    }
+    player_turn = 3 - player_turn;
+    return true;
+}
+
+void GameState::game() {
+    init();
+    while (true) {
+        int x, y; cin >> x >> y;
+        if (!coords_check(x, y) || board[x][y]) { cout << "invalid\n"; continue; }
+        apply_move(x, y);
+        if (game_end_check().first) break;
+    }
+}
+
+// ================= 训练模块 =================
+// encode, TrainingSample, self_play_one_game, play_one_game, apply_transform, main 等请使用你之前的稳定版本，不需要更改。
 
 // ================= AI 接口 =================
 GameState GameState::clone() const { return *this; }
