@@ -204,8 +204,8 @@ Matrix Linear::backward(const Matrix& dY, float lr) {
     return dX;
 }
 
-Network::Network() : layer1(648, 512), layer2(512, 512),
-                     policy_head(512, 81), value_head(512, 1) {}
+Network::Network() : layer1(648, 768), layer2(768, 768),
+                     policy_head(768, 81), value_head(768, 1) {}
 
 void Network::forward(const Matrix& input, Matrix& policy, float& value) {
     // 第一隐藏层
@@ -254,13 +254,13 @@ float Network::train(const Matrix& input, const std::vector<float>& pi, float z,
 
     // ---- 4. 两个输出头分别反向传播 ----
     // policy_head 反向，得到对 h2_post 的梯度
-    Matrix d_h2_from_policy = policy_head.backward(d_policy_raw, lr);  // (1×512)
+    Matrix d_h2_from_policy = policy_head.backward(d_policy_raw, lr);  // (1×768)
     // value_head 反向，得到对 h2_post 的梯度
-    Matrix d_h2_from_value = value_head.backward(d_value_raw, lr);     // (1×512)
+    Matrix d_h2_from_value = value_head.backward(d_value_raw, lr);     // (1×768)
 
     // 合并两个梯度形成对 h2_post 的总梯度
-    Matrix d_h2_post(1, 512);
-    for (int j = 0; j < 512; ++j)
+    Matrix d_h2_post(1, 768);
+    for (int j = 0; j < 768; ++j)
         d_h2_post.at(0, j) = d_h2_from_policy.at(0, j) + d_h2_from_value.at(0, j);
 
     // ---- 5. 反向通过第二个 ReLU ----
@@ -268,7 +268,7 @@ float Network::train(const Matrix& input, const std::vector<float>& pi, float z,
     d_h2_pre.relu_backward(h2_pre);       // 依据 h2_pre 的正负屏蔽梯度
 
     // ---- 6. 第二隐藏层的线性反向 ----
-    Matrix d_h1_post = layer2.backward(d_h2_pre, lr);  // (1×512)
+    Matrix d_h1_post = layer2.backward(d_h2_pre, lr);  // (1×768)
 
     // ---- 7. 反向通过第一个 ReLU ----
     Matrix d_h1_pre = d_h1_post;

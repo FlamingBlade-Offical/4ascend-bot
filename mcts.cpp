@@ -98,7 +98,7 @@ std::vector<float> mcts_search(const GameState& root_state, int root_player, Net
         expand(root, net);
     }
     if (add_noise && !root->children.empty()) {
-        float epsilon = 0.25f;          // 噪声混合比例
+        float epsilon = 0.35f;          // 噪声混合比例
         float alpha   = 0.03f;          // 值越小，噪声越集中
         std::vector<float> noise(root->children.size());
         std::gamma_distribution<float> gamma(alpha, 1.0f);

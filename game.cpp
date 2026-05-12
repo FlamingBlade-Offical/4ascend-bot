@@ -460,7 +460,7 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
 
         // 替换为
         int sampled_idx;
-        if (game.turn_number < 12) {  // 前12步用温度采样
+        if (game.turn_number < 20) {  // 前12步用温度采样
             std::discrete_distribution<int> dist_pi(pi.begin(), pi.end());
             sampled_idx = dist_pi(rng);
         } else {
@@ -534,6 +534,8 @@ void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, 
     // 变换策略π
     transform81(pi);
 }
+std::vector<TrainingSample> replay_buffer;
+const int replay_capacity = 4096;   // 缓冲区大小（可根据内存调整）
 int main() {
     srand(time(nullptr));
 
@@ -546,12 +548,12 @@ int main() {
         std::cout << "No saved network, starting from scratch.\n";
     }
 
-    const int games_per_iter = 80;
-    const int eval_games = 80;
-    const int epochs = 3;
+    const int games_per_iter = 120;
+    const int eval_games = 150;
+    const int epochs = 5;
     int consecutive_accepts = 0;
     for (int iter = 0; ; ++iter) {
-        float lr = std::max(0.000005f, 0.0001f * (float)std::pow(0.5f, iter / 5));
+        float lr = std::max(0.0000005f, 0.00005f * (float)std::pow(0.75, iter / 5));
        // float lr = 0.0001;
                 std::vector<TrainingSample> all_data;
         // 并行启动所有自我对弈任务
@@ -575,17 +577,35 @@ int main() {
                 }
             }
         }
+        for (auto& sample : all_data) {
+            replay_buffer.push_back(sample);
+        }
+        // 如果超出容量，丢弃最旧的样本
+        while (replay_buffer.size() > replay_capacity) {
+            replay_buffer.erase(replay_buffer.begin());
+        }
         Network new_net = best_net;
         for (int epoch = 0; epoch < epochs; ++epoch) {
-            std::shuffle(all_data.begin(), all_data.end(), rng);
+            // 如果缓冲区样本不足，等待下一轮
+            if (replay_buffer.size() < 512) continue;
+
+            // 确定本次训练的批次大小（取缓冲区大小的 1/4 或固定值）
+            int batch_size = std::min(1024, (int)replay_buffer.size());
+
+            // 随机打乱缓冲区索引
+            std::vector<int> indices(replay_buffer.size());
+            std::iota(indices.begin(), indices.end(), 0);
+            std::shuffle(indices.begin(), indices.end(), rng);
+
             float total_loss = 0;
-            for (auto& sample : all_data) {
+            for (int i = 0; i < batch_size; i++) {
+                auto& sample = replay_buffer[indices[i]];
                 Matrix input(1, 648);
-                for (int i = 0; i < 648; ++i) input.at(0, i) = sample.features[i];
+                for (int j = 0; j < 648; ++j) input.at(0, j) = sample.features[j];
                 total_loss += new_net.train(input, sample.pi, sample.z, lr);
             }
             std::cout << "Iter " << iter << " Epoch " << epoch
-                      << " avg loss: " << total_loss / all_data.size() << std::endl;
+              << " avg loss: " << total_loss / batch_size << std::endl;
         }
 
         int wins_black = 0, wins_white = 0;
