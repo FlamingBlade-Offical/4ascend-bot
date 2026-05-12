@@ -102,16 +102,6 @@ void GameState::init_plant() {
     plant_stone_count = 0;
 }
 
-void GameState::print_board() {
-    cout << ascend_player[1].attack << " " << ascend_player[2].attack << endl;
-    cout << hp[1] << " " << hp[2] << endl;
-    for (int i = 0; i < N; ++i) {
-        for (int j = 0; j < N; ++j) cout << board[i][j] << " ";
-        for (int j = 0; j < N; ++j) cout << (plants[i][j] ? "* " : ". ");
-        cout << endl;
-    }
-}
-
 int GameState::coords_check(int x, int y) { return x >= 0 && x < 9 && y >= 0 && y < 9; }
 
 int GameState::ascend_check(int x, int y, int op) {

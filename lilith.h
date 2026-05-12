@@ -41,7 +41,6 @@ public:
     // 前向传播：输入 → 输出
     Matrix forward(const Matrix& input);
     Matrix backward(const Matrix& dY,float lr);
-    Matrix policy_loss_gradient(const Matrix& p, const Matrix& pi);
 };
 class Network {
 public:
