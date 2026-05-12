@@ -484,7 +484,7 @@ void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, 
 }
 
 std::vector<TrainingSample> replay_buffer;
-const int replay_capacity = 4096;
+const int replay_capacity = 16384;
 
 int main() {
     srand(time(nullptr));
@@ -532,7 +532,7 @@ int main() {
         }
         Network new_net = best_net;
         for (int epoch = 0; epoch < epochs; ++epoch) {
-            int batch_size = std::min(1024, (int)replay_buffer.size());
+            int batch_size = std::min(4096, (int)replay_buffer.size());
             std::vector<int> indices(replay_buffer.size());
             std::iota(indices.begin(), indices.end(), 0);
             std::shuffle(indices.begin(), indices.end(), rng);
