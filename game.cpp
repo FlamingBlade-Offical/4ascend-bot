@@ -427,11 +427,11 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
         int x = sampled_idx / 9;
         int y = sampled_idx % 9;
         game.apply_move(x, y);
-        cout << "Turn " << game.turn_number
+        /*cout << "Turn " << game.turn_number
         << " player " << game.player_turn
         << " move (" << x << "," << y << ")"
         << " cnt: " << game.cnt[1] << "/" << game.cnt[2]
-        << " hp: " << game.hp[1] << "/" << game.hp[2] << endl;
+        << " hp: " << game.hp[1] << "/" << game.hp[2] << endl;*/
     }
 
     int winner = game.game_end_check().second;
@@ -440,9 +440,9 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
         float z = (state.player_turn == winner) ? 1.0f : -1.0f;
         samples.push_back({encode(state), pi, z});
     }
-    cout << "Winner: " << winner << " | z:";
-    for (auto& s : samples) cout << " " << s.z;
-    cout << endl;
+    //cout << "Winner: " << winner << " | z:";
+    //for (auto& s : samples) cout << " " << s.z;
+    //cout << endl;
     return samples;
 }
 
@@ -496,7 +496,6 @@ const int replay_capacity = 16384;
 
 int main() {
     srand(time(nullptr));
-
     Network best_net;
     try {
         best_net = Network::load("best_net.bin");
@@ -524,13 +523,13 @@ int main() {
             auto game_data = fut.get();
             for (auto& sample : game_data) {
                 all_data.push_back(sample);
-                for (int k = 0; k < 3; ++k) {
+                /*for (int k = 0; k < 3; ++k) {
                     TrainingSample aug = sample;
                     int rot = rng() % 4;
                     bool mirror = rng() % 2;
                     apply_transform(aug.features, aug.pi, rot, mirror);
                     all_data.push_back(aug);
-                }
+                }*/
             }
         }
         for (auto& sample : all_data) {

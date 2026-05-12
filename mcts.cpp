@@ -85,6 +85,11 @@ void expand(MCTSNode* leaf, Network& net) {
         leaf->children.push_back(child);
     }
 
+    float sum_P = 0;
+    for (auto* ch : leaf->children) sum_P += ch->P;
+    if (sum_P > 0)
+        for (auto* ch : leaf->children) ch->P /= sum_P;
+
     // 回传网络评估的价值
     backup(leaf, value);
 }
