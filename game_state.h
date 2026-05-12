@@ -105,8 +105,8 @@ private:
     void get_align(int x, int y, int stone, int& max_align, int& max_align_total);
     std::vector<std::pair<int, int>> p_scan_pos(bool flag3, bool flag4);
     std::vector<std::pair<int, int>> p_scan_score(
-        const std::vector<std::pair<int, int>>& points, bool atk, int count,
-        bool flag, bool flag2, bool flag4);
+    const std::vector<std::pair<int, int>>& points, bool atk, int count,
+    bool flag, bool flag2, bool flag4, int self, int foe);
     void p_sort_pos(std::vector<std::pair<int, int>>& pts);
     int get_player_index() const { return player_turn; }   // 返回1或2
 };

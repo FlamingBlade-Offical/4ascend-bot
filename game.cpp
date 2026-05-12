@@ -37,6 +37,18 @@ void GameState::init_plant() {
     plant_stone_count = 0;
 }
 
+// ================= AI 接口 =================
+GameState GameState::clone() const { return *this; }
+
+std::vector<std::pair<int, int>> GameState::get_legal_moves() const {
+    std::vector<std::pair<int, int>> moves;
+    for (int i = 0; i < N; ++i)
+        for (int j = 0; j < N; ++j)
+            if (board[i][j] == 0)
+                moves.push_back({i, j});
+    return moves;
+}
+
 void GameState::print_board() {
     cout << ascend_player[1].attack << " " << ascend_player[2].attack << endl;
     cout << hp[1] << " " << hp[2] << endl;
@@ -113,10 +125,9 @@ void GameState::p_sort_pos(vector<pair<int, int>>& pts) {
 }
 
 vector<pair<int, int>> GameState::p_scan_pos(bool flag3, bool flag4) {
-    // tst 使用1/2代表USED棋子
     vector<int> tst;
-    if (unascend_chargef[1] == 0) tst.push_back(1); // 白USED
-    if (unascend_chargef[2] == 0) tst.push_back(2); // 黑USED
+    if (unascend_chargef[1] == 0) tst.push_back(1);
+    if (unascend_chargef[2] == 0) tst.push_back(2);
     if (tst.empty()) { tst.push_back(1); tst.push_back(2); }
 
     vector<pair<int, int>> result;
@@ -132,7 +143,6 @@ vector<pair<int, int>> GameState::p_scan_pos(bool flag3, bool flag4) {
             bool filled = true;
             bool a = false;
             if (flag3) {
-                // stone 已经是1或2，可以直接放入tst检查
                 if (find(tst.begin(), tst.end(), stone) != tst.end() || (filled && (flag4 || over_status != 0))) a = true;
             } else a = filled;
             if (!a) continue;
@@ -153,12 +163,11 @@ vector<pair<int, int>> GameState::p_scan_pos(bool flag3, bool flag4) {
     return result;
 }
 
+// 修复：增加 self / foe 参数，不再从 player_turn 推断
 vector<pair<int, int>> GameState::p_scan_score(
     const vector<pair<int, int>>& points, bool atk, int count,
-    bool flag, bool flag2, bool flag4)
+    bool flag, bool flag2, bool flag4, int self, int foe)
 {
-    int self = get_player_index();          // 1或2
-    int foe = (self == 1) ? 2 : 1;          // 对手
     int tst[4] = {0}; int tst_len = 0;
     if (unascend_chargef[1] == 0) tst[tst_len++] = 1;
     if (unascend_chargef[2] == 0) tst[tst_len++] = 2;
@@ -255,7 +264,6 @@ vector<pair<int, int>> GameState::p_scan_score(
         int x = result[idx].x, y = result[idx].y;
         if (plants[x][y] < 2) {
             selected.push_back({x, y});
-            // bit 更新
             int bit = result[idx].bit;
             if (bit & 1) unascend_chargef[self] = max(unascend_chargef[self], 4);
             if (bit & 2) unascend_chargef[foe] = max(unascend_chargef[foe], 4);
@@ -266,8 +274,10 @@ vector<pair<int, int>> GameState::p_scan_score(
 
 void GameState::generate_plant() {
     turn_count_plant++;
-    int self = player_turn;              // 1或2
-    int foe = (self == 1) ? 2 : 1;
+    // ★ 核心修复：self 应为植物生成后即将行动的一方（3 - player_turn）
+    int self = 3 - player_turn;   // 即将落子方
+    int foe  = player_turn;       // 刚行动完的一方
+
     if (ascend_status == 1) return;
     bool atk = (ascend_status == 2);
 
@@ -286,20 +296,21 @@ void GameState::generate_plant() {
 
     int plant_count = (turn_count_plant >= 65) ? 3 : 2;
     if (plant_stone_count >= 44 && over_status == 0) over_status = 1;
-    if (over_status == 1 && hp[self] <= hp[foe]) over_status = 2;
+    if (over_status == 1 && hp[self] <= hp[foe]) over_status = 2; // 此处也改用 self/foe 而非 player_turn
     if (over_status != 0 && plant_stone_count < 22) over_status = 0;
 
     bool flag3 = atk;
     bool flag4 = atk && unascend_charge <= 0;
-    bool flag = unascend_chargef[self] > 0;
-    bool flag2 = unascend_chargef[foe] > 0;
-    if (unascend_chargef[self] > 0) atk = false;
+    bool flag = unascend_chargef[self] > 0;      // 修正：用 self 而非 player_turn
+    bool flag2 = unascend_chargef[foe] > 0;       // 修正：用 foe
+    if (unascend_chargef[self] > 0) atk = false;  // 修正
 
     auto cand = p_scan_pos(flag3, flag4);
     if (!cand.empty()) {
         if (over_status == 2) plant_count++;
         plant_count = min(plant_count, (int)cand.size());
-        auto selected = p_scan_score(cand, atk, plant_count, flag, flag2, flag4);
+        // 传入 self 和 foe
+        auto selected = p_scan_score(cand, atk, plant_count, flag, flag2, flag4, self, foe);
         for (auto& [x, y] : selected) plants[x][y]++;
     }
 
@@ -314,21 +325,11 @@ void GameState::generate_plant() {
         float val = 12.5f + unascend_charge + (25 - unascend_charge) * 0.4f;
         val = max(12.5f, min(val, 25.0f));
         unascend_charge = (int)ceil(val);
+        // ★ 充能始终加给 self（进攻方，即即将落子方），符合官方逻辑
         unascend_chargef[self] = max(unascend_chargef[self], (over_status != 0) ? 4 : 9);
         just_unascend = true;
     }
 }
-// ================= 训练模块 =================
-// encode, TrainingSample, self_play_one_game, play_one_game, apply_transform, main 等请使用你之前的稳定版本，不需要更改。
-
-// ================= AI 接口 =================
-GameState GameState::clone() const { return *this; }
-vector<pair<int, int>> GameState::get_legal_moves() const {
-    vector<pair<int, int>> moves;
-    for (int i = 0; i < N; ++i) for (int j = 0; j < N; ++j) if (board[i][j] == 0) moves.push_back({i, j});
-    return moves;
-}
-
 bool GameState::apply_move(int x, int y) {
     if (!coords_check(x, y) || board[x][y] != 0) return false;
     board[x][y] = player_turn;
@@ -362,26 +363,16 @@ bool GameState::apply_move(int x, int y) {
         cnt[2] -= ascend_player[2].slots.size();
         ascend_player[1].init(); ascend_player[2].init();
         ascend_status = 2; // END
-        generate_plant();
+        generate_plant();          // ★ 此处 plant 生成时已使用修正后的 self
         ascend_status = 0;
         ascend_turn = 0;
     } else {
-        generate_plant();
+        generate_plant();          // 普通回合植物生成
     }
     player_turn = 3 - player_turn;
     return true;
 }
-
-void GameState::game() {
-    init();
-    while (true) {
-        int x, y; cin >> x >> y;
-        if (!coords_check(x, y) || board[x][y]) { cout << "invalid\n"; continue; }
-        apply_move(x, y);
-        if (game_end_check().first) break;
-    }
-}
-std::vector<float> encode(const GameState& state);
+// ================= 训练模块 =================
 struct TrainingSample {
     std::vector<float> features;
     std::vector<float> pi;
@@ -396,13 +387,11 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
         auto pi = mcts_search(game, game.player_turn, net, sims);
         history.push_back({game.clone(), pi});
 
-        // 替换为
         int sampled_idx;
-        if (game.turn_number < 20) {  // 前12步用温度采样
+        if (game.turn_number < 20) {
             std::discrete_distribution<int> dist_pi(pi.begin(), pi.end());
             sampled_idx = dist_pi(rng);
         } else {
-            // 贪心选择最大概率
             sampled_idx = 0;
             float best_p = pi[0];
             for (int i = 1; i < 81; ++i) {
@@ -417,7 +406,7 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
         game.apply_move(x, y);
     }
 
-    int winner = game.game_end_check().second; // 1白 2黑
+    int winner = game.game_end_check().second;
     std::vector<TrainingSample> samples;
     for (auto& [state, pi] : history) {
         float z = (state.player_turn == winner) ? 1.0f : -1.0f;
@@ -425,12 +414,13 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
     }
     return samples;
 }
+
 int play_one_game(Network& net1, Network& net2) {
     GameState game;
     game.init();
     while (!game.game_end_check().first) {
         auto pi = (game.player_turn == 1) ?
-            mcts_search(game, 1, net1, 1200, 2.0f, false):
+            mcts_search(game, 1, net1, 1200, 2.0f, false) :
             mcts_search(game, 2, net2, 1200, 2.0f, false);
         int best_idx = 0;
         float best_p = pi[0];
@@ -439,45 +429,43 @@ int play_one_game(Network& net1, Network& net2) {
         }
         game.apply_move(best_idx / 9, best_idx % 9);
     }
-    return game.game_end_check().second; // 1白(旧)赢 2黑(新)赢
+    return game.game_end_check().second;
 }
-// 应用旋转变换（rot=0..3）和镜像（mirror=false/true）
+
 void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, bool mirror) {
-    if (rot == 0 && !mirror) return;  // 原始样本不变
+    if (rot == 0 && !mirror) return;
 
     auto transform81 = [rot, mirror](std::vector<float>& arr) {
         std::vector<float> temp(81);
         for (int i = 0; i < 9; ++i) {
             for (int j = 0; j < 9; ++j) {
                 int ni = i, nj = j;
-                if (mirror) nj = 8 - j;          // 水平镜像
-                // 旋转
+                if (mirror) nj = 8 - j;
                 int idx_new;
                 if (rot == 0)      idx_new = ni * 9 + nj;
-                else if (rot == 1) idx_new = nj * 9 + (8 - ni);   // 90°
-                else if (rot == 2) idx_new = (8 - ni) * 9 + (8 - nj); // 180°
-                else               idx_new = (8 - nj) * 9 + ni;   // 270°
+                else if (rot == 1) idx_new = nj * 9 + (8 - ni);
+                else if (rot == 2) idx_new = (8 - ni) * 9 + (8 - nj);
+                else               idx_new = (8 - nj) * 9 + ni;
                 temp[idx_new] = arr[i * 9 + j];
             }
         }
         arr = temp;
     };
 
-    // 对全部8个通道（81×8=648）逐一变换
     for (int c = 0; c < 8; ++c) {
         std::vector<float> channel(feat.begin() + c * 81, feat.begin() + (c + 1) * 81);
         transform81(channel);
         std::copy(channel.begin(), channel.end(), feat.begin() + c * 81);
     }
-    // 变换策略π
     transform81(pi);
 }
+
 std::vector<TrainingSample> replay_buffer;
-const int replay_capacity = 4096;   // 缓冲区大小（可根据内存调整）
+const int replay_capacity = 4096;
+
 int main() {
     srand(time(nullptr));
 
-    // 尝试加载已有网络
     Network best_net;
     try {
         best_net = Network::load("best_net.bin");
@@ -492,16 +480,13 @@ int main() {
     int consecutive_accepts = 0;
     for (int iter = 0; ; ++iter) {
         float lr = std::max(0.0000005f, 0.00005f * (float)std::pow(0.75, iter / 5));
-       // float lr = 0.0001;
-                std::vector<TrainingSample> all_data;
-        // 并行启动所有自我对弈任务
+        std::vector<TrainingSample> all_data;
         std::vector<std::future<std::vector<TrainingSample>>> self_play_futures;
         for (int g = 0; g < games_per_iter; ++g) {
             self_play_futures.emplace_back(
                 std::async(std::launch::async, self_play_one_game, std::ref(best_net), 2400)
             );
         }
-        // 依次收集结果并增强（数据增强必须在主线程，因为 rng 不是线程安全的）
         for (auto& fut : self_play_futures) {
             auto game_data = fut.get();
             for (auto& sample : game_data) {
@@ -518,17 +503,12 @@ int main() {
         for (auto& sample : all_data) {
             replay_buffer.push_back(sample);
         }
-        // 如果超出容量，丢弃最旧的样本
         while (replay_buffer.size() > replay_capacity) {
             replay_buffer.erase(replay_buffer.begin());
         }
         Network new_net = best_net;
         for (int epoch = 0; epoch < epochs; ++epoch) {
-
-            // 确定本次训练的批次大小（取缓冲区大小的 1/4 或固定值）
             int batch_size = std::min(1024, (int)replay_buffer.size());
-
-            // 随机打乱缓冲区索引
             std::vector<int> indices(replay_buffer.size());
             std::iota(indices.begin(), indices.end(), 0);
             std::shuffle(indices.begin(), indices.end(), rng);
@@ -541,27 +521,23 @@ int main() {
                 total_loss += new_net.train(input, sample.pi, sample.z, lr);
             }
             std::cout << "Iter " << iter << " Epoch " << epoch
-              << " avg loss: " << total_loss / batch_size << std::endl;
+                      << " avg loss: " << total_loss / batch_size << std::endl;
         }
 
         int wins_black = 0, wins_white = 0;
-
-        // 同时启动所有 160 局对局
         std::vector<std::future<int>> futures_black, futures_white;
         for (int g = 0; g < eval_games; ++g) {
             futures_black.emplace_back(
-                std::async(std::launch::async, play_one_game, std::ref(best_net), std::ref(new_net))  // new_net 执黑
+                std::async(std::launch::async, play_one_game, std::ref(best_net), std::ref(new_net))
             );
             futures_white.emplace_back(
-                std::async(std::launch::async, play_one_game, std::ref(new_net), std::ref(best_net))  // new_net 执白
+                std::async(std::launch::async, play_one_game, std::ref(new_net), std::ref(best_net))
             );
         }
 
-        // 收集后手对局结果
         for (auto& fut : futures_black) {
             if (fut.get() == 2) wins_black++;
         }
-        // 收集先手对局结果
         for (auto& fut : futures_white) {
             if (fut.get() == 1) wins_white++;
         }
@@ -569,20 +545,14 @@ int main() {
         float black_win_rate = (float)wins_black / eval_games;
         float white_win_rate = (float)wins_white / eval_games;
         std::cout << "New net (Black) win rate: " << black_win_rate
-                << ", (White) win rate: " << white_win_rate << std::endl;
+                  << ", (White) win rate: " << white_win_rate << std::endl;
 
         if (black_win_rate > 0.6f && white_win_rate > 0.6f) {
-            // 更新网络并保存
-            // 正式更新网络
             best_net = new_net;
             try {
                 best_net.save("best_net.bin");
                 std::cout << "Network saved to best_net.bin\n";
-
-                // 创建 net 文件夹（如果不存在）
                 system("mkdir -p net");
-
-                // 自动备份到 net 文件夹
                 try {
                     std::string backup_name = "net/best_net_iter_" + std::to_string(iter) + ".bin";
                     std::ifstream src("best_net.bin", std::ios::binary);
@@ -595,7 +565,7 @@ int main() {
             } catch (...) {
                 std::cout << "Save failed.\n";
             }
-            consecutive_accepts = 0;  // 重置计数器，下一轮重新开始
+            consecutive_accepts = 0;
         }
         else {
             std::cout << "Network rejected.\n";
