@@ -522,10 +522,8 @@ int main() {
         while (replay_buffer.size() > replay_capacity) {
             replay_buffer.erase(replay_buffer.begin());
         }
-        if (replay_buffer.size() < 512) continue;
         Network new_net = best_net;
         for (int epoch = 0; epoch < epochs; ++epoch) {
-            // 如果缓冲区样本不足，等待下一轮
 
             // 确定本次训练的批次大小（取缓冲区大小的 1/4 或固定值）
             int batch_size = std::min(1024, (int)replay_buffer.size());
