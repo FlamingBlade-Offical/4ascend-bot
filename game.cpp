@@ -430,8 +430,8 @@ int play_one_game(Network& net1, Network& net2) {
     game.init();
     while (!game.game_end_check().first) {
         auto pi = (game.player_turn == 1) ?
-            mcts_search(game, 1, net1, 1600, 2.0f, false):
-            mcts_search(game, 2, net2, 1600, 2.0f, false);
+            mcts_search(game, 1, net1, 1200, 2.0f, false):
+            mcts_search(game, 2, net2, 1200, 2.0f, false);
         int best_idx = 0;
         float best_p = pi[0];
         for (int i = 1; i < 81; ++i) {
@@ -498,7 +498,7 @@ int main() {
         std::vector<std::future<std::vector<TrainingSample>>> self_play_futures;
         for (int g = 0; g < games_per_iter; ++g) {
             self_play_futures.emplace_back(
-                std::async(std::launch::async, self_play_one_game, std::ref(best_net), 3200)
+                std::async(std::launch::async, self_play_one_game, std::ref(best_net), 2400)
             );
         }
         // 依次收集结果并增强（数据增强必须在主线程，因为 rng 不是线程安全的）
