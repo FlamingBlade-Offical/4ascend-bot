@@ -1,0 +1,94 @@
+Loaded existing network.
+Iter 0 Epoch 0 avg loss: 5.14593
+Iter 0 Epoch 1 avg loss: 4.91899
+Iter 0 Epoch 2 avg loss: 4.81767
+New net (Black) win rate: 0.41, (White) win rate: 0.32
+Network rejected.
+Iter 1 Epoch 0 avg loss: 5.13036
+Iter 1 Epoch 1 avg loss: 4.90509
+Iter 1 Epoch 2 avg loss: 4.81007
+New net (Black) win rate: 0.38, (White) win rate: 0.43
+Network rejected.
+Iter 2 Epoch 0 avg loss: 5.08851
+Iter 2 Epoch 1 avg loss: 4.87561
+Iter 2 Epoch 2 avg loss: 4.78344
+New net (Black) win rate: 0.37, (White) win rate: 0.49
+Network rejected.
+Iter 3 Epoch 0 avg loss: 5.0039
+Iter 3 Epoch 1 avg loss: 4.80105
+Iter 3 Epoch 2 avg loss: 4.7139
+New net (Black) win rate: 0.32, (White) win rate: 0.25
+Network rejected.
+Iter 4 Epoch 0 avg loss: 5.09388
+Iter 4 Epoch 1 avg loss: 4.88982
+Iter 4 Epoch 2 avg loss: 4.80483
+New net (Black) win rate: 0.18, (White) win rate: 0.17
+Network rejected.
+Iter 5 Epoch 0 avg loss: 5.20856
+Iter 5 Epoch 1 avg loss: 5.03446
+Iter 5 Epoch 2 avg loss: 4.9383
+New net (Black) win rate: 0.2, (White) win rate: 0.27
+Network rejected.
+Iter 6 Epoch 0 avg loss: 5.10809
+Iter 6 Epoch 1 avg loss: 4.94938
+Iter 6 Epoch 2 avg loss: 4.85354
+New net (Black) win rate: 0.14, (White) win rate: 0.16
+Network rejected.
+Iter 7 Epoch 0 avg loss: 5.14402
+Iter 7 Epoch 1 avg loss: 4.96164
+Iter 7 Epoch 2 avg loss: 4.8606
+New net (Black) win rate: 0.15, (White) win rate: 0.24
+Network rejected.
+Iter 8 Epoch 0 avg loss: 5.21947
+Iter 8 Epoch 1 avg loss: 5.05365
+Iter 8 Epoch 2 avg loss: 4.95608
+New net (Black) win rate: 0.34, (White) win rate: 0.35
+Network rejected.
+Iter 9 Epoch 0 avg loss: 5.16562
+Iter 9 Epoch 1 avg loss: 4.98648
+Iter 9 Epoch 2 avg loss: 4.88671
+New net (Black) win rate: 0.42, (White) win rate: 0.51
+Network rejected.
+Iter 10 Epoch 0 avg loss: 5.21174
+Iter 10 Epoch 1 avg loss: 5.05196
+Iter 10 Epoch 2 avg loss: 4.97256
+New net (Black) win rate: 0.07, (White) win rate: 0.16
+Network rejected.
+Iter 11 Epoch 0 avg loss: 5.21196
+Iter 11 Epoch 1 avg loss: 5.06071
+Iter 11 Epoch 2 avg loss: 4.97828
+New net (Black) win rate: 0.14, (White) win rate: 0.1
+Network rejected.
+Iter 12 Epoch 0 avg loss: 5.28049
+Iter 12 Epoch 1 avg loss: 5.16098
+Iter 12 Epoch 2 avg loss: 5.0869
+New net (Black) win rate: 0.11, (White) win rate: 0.07
+Network rejected.
+Iter 13 Epoch 0 avg loss: 5.28408
+Iter 13 Epoch 1 avg loss: 5.14502
+Iter 13 Epoch 2 avg loss: 5.06448
+New net (Black) win rate: 0.16, (White) win rate: 0.13
+Network rejected.
+Iter 14 Epoch 0 avg loss: 5.16844
+Iter 14 Epoch 1 avg loss: 5.02311
+Iter 14 Epoch 2 avg loss: 4.95205
+New net (Black) win rate: 0.29, (White) win rate: 0.21
+Network rejected.
+Iter 15 Epoch 0 avg loss: 5.32585
+Iter 15 Epoch 1 avg loss: 5.21353
+Iter 15 Epoch 2 avg loss: 5.14888
+New net (Black) win rate: 0.1, (White) win rate: 0.18
+Network rejected.
+Iter 16 Epoch 0 avg loss: 5.32583
+Iter 16 Epoch 1 avg loss: 5.23152
+Iter 16 Epoch 2 avg loss: 5.17488
+New net (Black) win rate: 0.12, (White) win rate: 0.09
+Network rejected.
+Iter 17 Epoch 0 avg loss: 5.24781
+Iter 17 Epoch 1 avg loss: 5.13407
+Iter 17 Epoch 2 avg loss: 5.07544
+New net (Black) win rate: 0.08, (White) win rate: 0.08
+Network rejected.
+Iter 18 Epoch 0 avg loss: 5.19612
+Iter 18 Epoch 1 avg loss: 5.08578
+Iter 18 Epoch 2 avg loss: 5.02692

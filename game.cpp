@@ -155,11 +155,11 @@ vector<pair<int, int>> GameState::p_scan_score(
     const vector<pair<int, int>>& points, bool atk, int count,
     bool flag, bool flag2, bool flag4)
 {
-    int self = get_player_index();   // 0黑 1白
-    int foe = 1 - self;
+    int self = player_turn;          // 1=白, 2=黑
+    int foe = 3 - player_turn;
     int tst[4] = {0}; int tst_len = 0;
-    if (unascend_chargef[0] == 0) tst[tst_len++] = 1;
-    if (unascend_chargef[1] == 0) tst[tst_len++] = 2;
+    if (unascend_chargef[1] == 0) tst[tst_len++] = 1;
+    if (unascend_chargef[2] == 0) tst[tst_len++] = 2;
     if (tst_len == 0) { tst[0] = 1; tst[1] = 2; tst_len = 2; }
 
     struct Scored { int x, y, score, bit; };
@@ -265,15 +265,15 @@ vector<pair<int, int>> GameState::p_scan_score(
 
 void GameState::generate_plant() {
     turn_count_plant++;
-    int self = get_player_index();
-    int foe = 1 - self;
+    int self = player_turn;          // 1=白, 2=黑
+    int foe = 3 - player_turn;
     if (ascend_status == 1) return;
     bool atk = (ascend_status == 2);
 
     if (!atk) {
         if (unascend_charge > 0) unascend_charge--;
-        if (unascend_chargef[0] > 0) unascend_chargef[0]--;
         if (unascend_chargef[1] > 0) unascend_chargef[1]--;
+        if (unascend_chargef[2] > 0) unascend_chargef[2]--;
         just_unascend = false;
     }
 
