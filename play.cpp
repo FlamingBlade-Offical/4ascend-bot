@@ -30,7 +30,7 @@ void GameState::print_board() {
     // 列号
     cout << "   ";
     for (int j = 0; j < N; ++j) cout << j << " ";
-    cout << "       ";  // 植物图例的间隔
+    cout << "    ";  // 植物图例的间隔
     for (int j = 0; j < N; ++j) cout << j << " ";
     cout << "\n";
 
@@ -46,15 +46,15 @@ void GameState::print_board() {
                 }
             }
 
-            bool has_plant = (plants[i][j] > 0);
+            bool has_plant = plants[i][j];
             int piece = board[i][j];   // 0空,1白,2黑
 
             // 根据 (ascend槽位, 棋子颜色, 植物) 组合字符
             if (is_ascend_slot) {
-                if (has_plant) cout << "A*";
+                if (has_plant) cout << "A ";
                 else           cout << "A ";
             } else if (piece == 1) {
-                if (has_plant) cout << "W*";
+                if (has_plant) cout << "W ";
                 else           cout << "W ";
             } else if (piece == 2) {
                 if (has_plant) cout << "B*";
@@ -466,17 +466,32 @@ int main() {
     while (game.game_end_check().first == 0) {
         if (game.player_turn == human_player) {
             // 人类回合
-            cout << "你的回合，请输入坐标 (x y): ";
+           /* cout << "你的回合，请输入坐标 (x y): ";
             int x, y;
             cin >> x >> y;
             if (!game.coords_check(x, y) || game.board[x][y] != 0) {
                 cout << "无效走法，请重试\n";
                 continue;
             }
-            game.apply_move(x, y);
+            game.apply_move(x, y);*/
+            cout << "weaker AI 思考中...\n";
+            // 搜索次数可以调小一点让响应更快（如 200）
+            auto pi = mcts_search(game, game.player_turn, ai, 800, 2.0,false);
+            int best_idx = 0;
+            float best_p = pi[0];
+            for (int i = 1; i < 81; ++i) {
+                if (pi[i] > best_p) {
+                    best_p = pi[i];
+                    best_idx = i;
+                }
+            }
+            int ax = best_idx / 9;
+            int ay = best_idx % 9;
+            cout << "weaker AI 走棋 (" << ax << ", " << ay << ")\n";
+            game.apply_move(ax, ay);
         } else {
             // AI 回合
-            cout << "AI 思考中...\n";
+            cout << "Lilith 思考中...\n";
             // 搜索次数可以调小一点让响应更快（如 200）
             auto pi = mcts_search(game, game.player_turn, ai, 1600, 2.0,false);
             int best_idx = 0;
@@ -489,10 +504,11 @@ int main() {
             }
             int ax = best_idx / 9;
             int ay = best_idx % 9;
-            cout << "AI 走棋 (" << ax << ", " << ay << ")\n";
+            cout << "Lilith 走棋 (" << ax << ", " << ay << ")\n";
             game.apply_move(ax, ay);
         }
         game.print_board();
+        getchar();
     }
 
     cout << "游戏结束！";

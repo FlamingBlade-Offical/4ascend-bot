@@ -1,64 +1,176 @@
 // lilith.h
+
 #ifndef LILITH_H
 #define LILITH_H
 
 #include <vector>
 #include <cassert>
+#include <fstream>
+#include <string>
+
 #include "game_state.h"
+
+// ======================================================
+// Matrix
+// ======================================================
 
 class Matrix {
 public:
+
     int rows, cols;
+
     std::vector<float> data;
 
     Matrix() : rows(0), cols(0) {}
-    Matrix(int r, int c);
-    float& at(int i, int j);
-    float  at(int i, int j) const;
 
-    // 激活函数（之后会加）
+    Matrix(int r, int c);
+
+    float& at(int i, int j);
+
+    float at(int i, int j) const;
+
+    // activation
     void relu();
-    void add_bias(const Matrix& bias);
-    void softmax();  // 把矩阵的某一行（1×cols）转为概率分布
-    void tanh_();    // 逐元素 tanh
+
+    void tanh_();
+
     void relu_backward(const Matrix& forward_input);
+
+    void softmax();
+
+    void add_bias(const Matrix& bias);
+
+    // io
     void save(std::ofstream& out) const;
+
     static Matrix load(std::ifstream& in);
 
-    // 矩阵乘法
+    // math
     Matrix operator*(const Matrix& other) const;
+
     Matrix transpose() const;
 };
+
+// ======================================================
+// Adam Optimizer Config
+// ======================================================
+
+struct AdamConfig {
+
+    float lr;
+
+    float beta1;
+
+    float beta2;
+
+    float eps;
+
+    float grad_clip;
+
+    AdamConfig(
+        float lr_ = 1e-3f,
+        float b1_ = 0.9f,
+        float b2_ = 0.999f,
+        float eps_ = 1e-8f,
+        float clip_ = 1.0f
+    );
+};
+
+// ======================================================
+// Linear Layer
+// ======================================================
+
 class Linear {
 public:
-    Matrix W;  // 权重 (fan_in × fan_out)
-    Matrix b;  // 偏置 (1 × fan_out)
+
+    // parameters
+    Matrix W;
+
+    Matrix b;
+
+    // cache
     Matrix X_cached;
+
+    // Adam states
+    Matrix mW, vW;
+
+    Matrix mb, vb;
+
+    int t;
+
     Linear(int in_features, int out_features);
-    Linear() = default;   // 需要默认构造函数（用于加载）
-    void save(std::ofstream& out) const;
-    static Linear load(std::ifstream& in);
-    // 前向传播：输入 → 输出
+
+    Linear() = default;
+
     Matrix forward(const Matrix& input);
-    Matrix backward(const Matrix& dY,float lr);
+
+    Matrix backward(
+        const Matrix& dY,
+        const AdamConfig& opt
+    );
+
+    void save(std::ofstream& out) const;
+
+    static Linear load(std::ifstream& in);
 };
+
+// ======================================================
+// Network
+// ======================================================
+
 class Network {
 public:
-    Linear layer1, layer2;
-    Linear policy_head, value_head;
+
+    Linear layer1;
+    Linear layer2;
+
+    Linear policy_head;
+    Linear value_head;
 
     Network();
+
+    void forward(
+        const Matrix& input,
+        Matrix& policy,
+        float& value
+    );
+
+    float train(
+        const Matrix& input,
+        const std::vector<float>& pi,
+        float z,
+        const AdamConfig& opt
+    );
+
     void save(const std::string& filename) const;
+
     static Network load(const std::string& filename);
-    // 前向传播：输入特征矩阵 (1×648)，返回 (policy矩阵, value原始值)
-    void forward(const Matrix& input, Matrix& policy, float& value);
-    float train(const Matrix& input, const std::vector<float>& pi, float z, float lr);
+
+    // training stability
+    void set_policy_smoothing(float eps);
+
+    void set_value_weight(float w);
+
 private:
-    // 缓存正向传播的中间值（仅用于训练）
-    Matrix h1_pre, h2_pre;
-    Matrix policy_raw, value_raw;
+
+    // forward cache
+    Matrix h1_pre;
+    Matrix h2_pre;
+
+    Matrix policy_raw;
+
+    Matrix value_raw;
+
+    // stabilization
+    float policy_smooth_eps;
+
+    float value_weight;
 };
-// 编码函数声明
-std::vector<float> encode(const GameState& state);  // 需要提前包含 game_state.h
+
+// ======================================================
+// Encode
+// ======================================================
+
+std::vector<float> encode(const GameState& state);
 
 #endif

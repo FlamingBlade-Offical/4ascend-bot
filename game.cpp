@@ -1,3 +1,4 @@
+// game.cpp
 #include "game_state.h"
 #include "lilith.h"
 #include "mcts.h"
@@ -12,6 +13,9 @@
 #include <thread>
 #include <mutex>
 #include <iomanip>
+#include <numeric>
+#include <iostream>
+
 using namespace std;
 
 thread_local std::mt19937 rng(std::random_device{}());
@@ -25,10 +29,14 @@ auto launch_limited(F&& f) {
     while (active_tasks >= MAX_CONCURRENT)
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     active_tasks++;
-    return std::async(std::launch::async, [f = std::forward<F>(f)]() {
-        auto result = f();
-        active_tasks--;
-        return result;
+    return std::async(std::launch::async, [f = std::forward<F>(f)]() mutable {
+        // 防异常卡死：确保 active_tasks-- 一定执行
+        struct Guard {
+            std::atomic<int>& a;
+            ~Guard() { a--; }
+        } guard{active_tasks};
+
+        return f();
     });
 }
 
@@ -417,7 +425,6 @@ bool GameState::apply_move(int x, int y) {
     player_turn = 3 - player_turn;
     return true;
 }
-
 // ================= 训练模块 =================
 struct TrainingSample {
     std::vector<float> features;
@@ -431,21 +438,15 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
     std::vector<std::pair<GameState, std::vector<float>>> history;
 
     while (!game.game_end_check().first) {
-        auto pi = mcts_search(game, game.player_turn, net, sims);  // ① 当前玩家 A 通过搜索得到策略 pi
-        history.push_back({game.clone(), pi});                      // ② 将当前状态克隆并保存（此时 player_turn 是 A） 
+        auto pi = mcts_search(game, game.player_turn, net, sims);   // add_noise 默认 true
+        history.push_back({game.clone(), pi});
+
         int sampled_idx;
         if (game.turn_number < 20) {
             std::discrete_distribution<int> dist_pi(pi.begin(), pi.end());
             sampled_idx = dist_pi(rng);
         } else {
-            sampled_idx = 0;
-            float best_p = pi[0];
-            for (int i = 1; i < 81; ++i) {
-                if (pi[i] > best_p) {
-                    best_p = pi[i];
-                    sampled_idx = i;
-                }
-            }
+            sampled_idx = int(std::max_element(pi.begin(), pi.end()) - pi.begin());
         }
         int x = sampled_idx / 9;
         int y = sampled_idx % 9;
@@ -454,6 +455,7 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
 
     int winner = game.game_end_check().second;
     std::vector<TrainingSample> samples;
+    samples.reserve(history.size());
     for (auto& [state, pi] : history) {
         float z = (state.player_turn == winner) ? 1.0f : -1.0f;
         samples.push_back({encode(state), pi, z});
@@ -461,21 +463,18 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
     return samples;
 }
 
-int play_one_game(Network& net1, Network& net2) {
+int play_one_game(Network& net1, Network& net2, int sims = 1200) {
     GameState game;
     game.init();
     while (!game.game_end_check().first) {
-        auto pi = (game.player_turn == 1) ?
-            mcts_search(game, 1, net1, 1200, 2.0f, false) :
-            mcts_search(game, 2, net2, 1200, 2.0f, false);
-        int best_idx = 0;
-        float best_p = pi[0];
-        for (int i = 1; i < 81; ++i) {
-            if (pi[i] > best_p) { best_p = pi[i]; best_idx = i; }
-        }
+        auto pi = (game.player_turn == 1)
+            ? mcts_search(game, 1, net1, sims, 2.0f, false)
+            : mcts_search(game, 2, net2, sims, 2.0f, false);
+
+        int best_idx = int(std::max_element(pi.begin(), pi.end()) - pi.begin());
         game.apply_move(best_idx / 9, best_idx % 9);
     }
-    return game.game_end_check().second;
+    return game.game_end_check().second; // 1 or 2
 }
 
 void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, bool mirror) {
@@ -510,7 +509,6 @@ std::vector<TrainingSample> replay_buffer;
 const int replay_capacity = 200000;
 
 int main() {
-    srand(time(nullptr));
     Network best_net;
     try {
         best_net = Network::load("best_net.bin");
@@ -519,24 +517,30 @@ int main() {
         std::cout << "No saved network, starting from scratch.\n";
     }
 
-    const int games_per_iter = 180;   // 适当恢复局数，保证数据量
-    const int eval_games = 100;       // 匹配局数，保持评估稳定
+    const int games_per_iter = 180;
+    const int eval_games = 200;     // 每边 200，总 400
     const int epochs = 3;
-    const int warmup_iterations = 0; // 前 3 个迭代强制更新
-    int consecutive_accepts = 0;
+    const int warmup_iterations = 0;
 
     for (int iter = 0; ; ++iter) {
-        std::cout << "Best net initial weight: " << best_net.layer1.W.at(0,0) << std::endl;
-        float lr = 0.0001 * pow(0.95, iter / 5); // 微调学习率，初期更快学习
+        std::cout << "Best net initial weight: " << best_net.layer1.W.at(0,0) << "\n";
 
-        // ====== 自对弈 ======ß
+        // lr schedule (你选的稳健版)
+        double lr;
+        if (iter < 30) lr = 2e-4;
+        else lr = 2e-4 * std::pow(0.95, (iter - 30) / 5.0);
+
+        // ====== 自对弈 ======
         games_total = games_per_iter;
         games_done = 0;
         std::vector<std::future<std::vector<TrainingSample>>> self_play_futures;
+        self_play_futures.reserve(games_per_iter);
+
         for (int g = 0; g < games_per_iter; ++g) {
             self_play_futures.emplace_back(
-                launch_limited([&]() {
-                    auto res = self_play_one_game(best_net, 1200);
+                launch_limited([best = best_net]() mutable {
+                    // 这里 sims 你现在用 2000；如果你想更均衡算力，可改 1200
+                    auto res = self_play_one_game(best, 2000);
                     games_done++;
                     print_progress("Self-Play", games_done.load(), games_total.load());
                     return res;
@@ -548,8 +552,10 @@ int main() {
         for (auto& fut : self_play_futures) {
             auto game_data = fut.get();
             for (auto& sample : game_data) {
-                if (iter < warmup_iterations) sample.z = 0.0f; // 预热期置零
+                if (iter < warmup_iterations) sample.z = 0.0f;
                 all_data.push_back(sample);
+
+                // augmentation（你现在是 3 次；更稳可改成 1）
                 for (int k = 0; k < 3; ++k) {
                     TrainingSample aug = sample;
                     int rot = rng() % 4;
@@ -559,81 +565,100 @@ int main() {
                 }
             }
         }
-        std::cout << std::endl; // 自对弈进度结束换行
+        std::cout << "\n";
 
-        for (auto& sample : all_data) {
-            replay_buffer.push_back(sample);
-        }
-        while (replay_buffer.size() > replay_capacity) {
-            replay_buffer.erase(replay_buffer.begin());
+        // push into replay
+        for (auto& s : all_data) replay_buffer.push_back(std::move(s));
+        while ((int)replay_buffer.size() > replay_capacity) {
+            replay_buffer.erase(replay_buffer.begin()); // O(n)，后续建议换 deque
         }
 
         // ====== 训练 ======
         Network new_net = best_net;
+
+        // 这两个是“稳定器”：早期建议保持
+        new_net.set_value_weight(0.25f);
+        new_net.set_policy_smoothing(0.02f);
+
         for (int epoch = 0; epoch < epochs; ++epoch) {
-            int batch_size = std::min(4096, (int)replay_buffer.size());
+            int batch_size = std::min(8192, (int)replay_buffer.size());
             std::vector<int> indices(replay_buffer.size());
             std::iota(indices.begin(), indices.end(), 0);
             std::shuffle(indices.begin(), indices.end(), rng);
 
-            float total_loss = 0;
+            float total_loss = 0.0f;
+            AdamConfig opt((float)lr, 0.9f, 0.999f, 1e-8f, 1.0f);
+
             for (int i = 0; i < batch_size; i++) {
                 auto& sample = replay_buffer[indices[i]];
                 Matrix input(1, 648);
                 for (int j = 0; j < 648; ++j) input.at(0, j) = sample.features[j];
-                total_loss += new_net.train(input, sample.pi, sample.z, lr);
+                total_loss += new_net.train(input, sample.pi, sample.z, opt);
             }
+
             std::cout << "Iter " << iter << " Epoch " << epoch
-                      << " avg loss: " << total_loss / batch_size << std::endl;
+                      << " avg loss: " << total_loss / batch_size << "\n";
         }
-        std::cout << "Sample weight: " << new_net.layer1.W.at(0,0) << std::endl;
-        // 诊断：计算新网络在空棋盘上的策略熵
-        GameState empty_state;
-        empty_state.init();
-        auto feat = encode(empty_state);
-        Matrix input(1, 648);
-        for (int i = 0; i < 648; ++i) input.at(0, i) = feat[i];
-        Matrix test_policy; float test_value;
-        new_net.forward(input, test_policy, test_value);
-        float entropy = 0.0f;
-        for (int i = 0; i < 81; ++i) {
-            float p = test_policy.at(0, i);
-            if (p > 1e-9f) entropy -= p * std::log(p);
+
+        std::cout << "Sample weight: " << new_net.layer1.W.at(0,0) << "\n";
+
+        // entropy diagnostic on empty board
+        {
+            GameState empty_state;
+            empty_state.init();
+            auto feat = encode(empty_state);
+            Matrix input(1, 648);
+            for (int i = 0; i < 648; ++i) input.at(0, i) = feat[i];
+
+            Matrix pol; float val;
+            new_net.forward(input, pol, val);
+
+            float entropy = 0.0f;
+            for (int i = 0; i < 81; ++i) {
+                float p = pol.at(0, i);
+                if (p > 1e-9f) entropy -= p * std::log(p);
+            }
+            std::cout << "New net policy entropy: " << entropy << "\n";
+
+            best_net.forward(input, pol, val);
+            float entropy_best = 0.0f;
+            for (int i = 0; i < 81; ++i) {
+                float p = pol.at(0, i);
+                if (p > 1e-9f) entropy_best -= p * std::log(p);
+            }
+            std::cout << "Best net policy entropy: " << entropy_best << "\n";
         }
-        std::cout << "New net policy entropy: " << entropy << std::endl;
-        // 同时检查最佳网络（随机）的熵作为基准
-        best_net.forward(input, test_policy, test_value);
-        float entropy_best = 0.0f;
-        for (int i = 0; i < 81; ++i) {
-            float p = test_policy.at(0, i);
-            if (p > 1e-9f) entropy_best -= p * std::log(p);
-        }
-        std::cout << "Best net policy entropy: " << entropy_best << std::endl;
+
         if (iter < warmup_iterations) {
             best_net = new_net;
-            std::cout << "Warmup iteration " << iter 
-                << ": best_net forced updated (no eval)." << std::endl;
+            std::cout << "Warmup iteration " << iter << ": best_net forced updated (no eval).\n";
             replay_buffer.clear();
-            // 这里可以选择保存模型，但不必强制
-            continue; // 跳过评估，直接进入下一轮
+            continue;
         }
+
         // ====== 评估 ======
         evals_total = eval_games * 2;
         evals_done = 0;
-        int wins_black = 0, wins_white = 0;
+
+        int wins_black = 0; // new_net as player2
+        int wins_white = 0; // new_net as player1
+
         std::vector<std::future<int>> futures_black, futures_white;
+        futures_black.reserve(eval_games);
+        futures_white.reserve(eval_games);
+
         for (int g = 0; g < eval_games; ++g) {
             futures_black.emplace_back(
-                launch_limited([&]() {
-                    int res = play_one_game(best_net, new_net);
+                launch_limited([best = best_net, neu = new_net]() mutable {
+                    int res = play_one_game(best, neu, 1200);
                     evals_done++;
                     print_progress("Eval      ", evals_done.load(), evals_total.load());
                     return res;
                 })
             );
             futures_white.emplace_back(
-                launch_limited([&]() {
-                    int res = play_one_game(new_net, best_net);
+                launch_limited([best = best_net, neu = new_net]() mutable {
+                    int res = play_one_game(neu, best, 1200);
                     evals_done++;
                     print_progress("Eval      ", evals_done.load(), evals_total.load());
                     return res;
@@ -641,26 +666,29 @@ int main() {
             );
         }
 
-        for (auto& fut : futures_black) {
-            if (fut.get() == 2) wins_black++;
-        }
-        for (auto& fut : futures_white) {
-            if (fut.get() == 1) wins_white++;
-        }
-        std::cout << std::endl; // 评估进度结束换行
+        for (auto& fut : futures_black) if (fut.get() == 2) wins_black++;
+        for (auto& fut : futures_white) if (fut.get() == 1) wins_white++;
+
+        std::cout << "\n";
 
         float black_win_rate = (float)wins_black / eval_games;
         float white_win_rate = (float)wins_white / eval_games;
+
         std::cout << "New net (Black) win rate: " << black_win_rate
-                  << ", (White) win rate: " << white_win_rate << std::endl;
+                  << ", (White) win rate: " << white_win_rate << "\n";
 
         float threshold = 0.55f;
-        //if (iter >= 3 + warmup_iterations) threshold = 0.50f;
-       // if (iter >= 5 + warmup_iterations) threshold = 0.50f;
-       //if (iter >= 10 + warmup_iterations) threshold = 0.55f;
-        std :: cout << "Threshold is = " << threshold << endl;
-        // 后续可继续提高
-        if (black_win_rate > threshold && white_win_rate > threshold) {
+        float floor_side = 0.45f;
+
+        float overall = 0.5f * (black_win_rate + white_win_rate);
+        float min_side = std::min(black_win_rate, white_win_rate);
+
+        std::cout << "Overall: " << overall
+                  << "  MinSide: " << min_side
+                  << "  Threshold: " << threshold
+                  << "  FloorSide: " << floor_side << "\n";
+
+        if (overall >= threshold && min_side >= floor_side) {
             best_net = new_net;
             try {
                 best_net.save("best_net.bin");
@@ -678,12 +706,10 @@ int main() {
             } catch (...) {
                 std::cout << "Save failed.\n";
             }
-            consecutive_accepts = 0;
-        }
-        else {
+        } else {
             std::cout << "Network rejected.\n";
         }
     }
-   
+
     return 0;
 }
