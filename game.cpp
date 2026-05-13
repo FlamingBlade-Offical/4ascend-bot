@@ -522,7 +522,7 @@ int main() {
     const int games_per_iter = 120;   // 适当恢复局数，保证数据量
     const int eval_games = 80;       // 匹配局数，保持评估稳定
     const int epochs = 5;
-    const int warmup_iterations = 3; // 前 3 个迭代强制更新
+    const int warmup_iterations = 0; // 前 3 个迭代强制更新
     int consecutive_accepts = 0;
 
     for (int iter = 0; ; ++iter) {
@@ -571,7 +571,7 @@ int main() {
         // ====== 训练 ======
         Network new_net = best_net;
         for (int epoch = 0; epoch < epochs; ++epoch) {
-            int batch_size = std::min(25000, (int)replay_buffer.size());
+            int batch_size = std::min(4096, (int)replay_buffer.size());
             std::vector<int> indices(replay_buffer.size());
             std::iota(indices.begin(), indices.end(), 0);
             std::shuffle(indices.begin(), indices.end(), rng);
