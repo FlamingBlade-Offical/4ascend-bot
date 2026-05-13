@@ -466,8 +466,8 @@ int play_one_game(Network& net1, Network& net2) {
     game.init();
     while (!game.game_end_check().first) {
         auto pi = (game.player_turn == 1) ?
-            mcts_search(game, 1, net1, 800, 2.0f, false) :
-            mcts_search(game, 2, net2, 800, 2.0f, false);
+            mcts_search(game, 1, net1, 1200, 2.0f, false) :
+            mcts_search(game, 2, net2, 1200, 2.0f, false);
         int best_idx = 0;
         float best_p = pi[0];
         for (int i = 1; i < 81; ++i) {
@@ -507,7 +507,7 @@ void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, 
 }
 
 std::vector<TrainingSample> replay_buffer;
-const int replay_capacity = 100000;
+const int replay_capacity = 200000;
 
 int main() {
     srand(time(nullptr));
@@ -520,8 +520,8 @@ int main() {
     }
 
     const int games_per_iter = 180;   // 适当恢复局数，保证数据量
-    const int eval_games = 80;       // 匹配局数，保持评估稳定
-    const int epochs = 5;
+    const int eval_games = 100;       // 匹配局数，保持评估稳定
+    const int epochs = 3;
     const int warmup_iterations = 0; // 前 3 个迭代强制更新
     int consecutive_accepts = 0;
 
@@ -529,14 +529,14 @@ int main() {
         std::cout << "Best net initial weight: " << best_net.layer1.W.at(0,0) << std::endl;
         float lr = 0.0001 * pow(0.95, iter / 5); // 微调学习率，初期更快学习
 
-        // ====== 自对弈 ======
+        // ====== 自对弈 ======ß
         games_total = games_per_iter;
         games_done = 0;
         std::vector<std::future<std::vector<TrainingSample>>> self_play_futures;
         for (int g = 0; g < games_per_iter; ++g) {
             self_play_futures.emplace_back(
                 launch_limited([&]() {
-                    auto res = self_play_one_game(best_net, 800);
+                    auto res = self_play_one_game(best_net, 1200);
                     games_done++;
                     print_progress("Self-Play", games_done.load(), games_total.load());
                     return res;
