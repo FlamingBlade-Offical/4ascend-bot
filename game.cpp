@@ -585,7 +585,28 @@ int main() {
                       << " avg loss: " << total_loss / batch_size << std::endl;
         }
         std::cout << "Sample weight: " << new_net.layer1.W.at(0,0) << std::endl;
-
+        // 诊断：计算新网络在空棋盘上的策略熵
+        GameState empty_state;
+        empty_state.init();
+        auto feat = encode(empty_state);
+        Matrix input(1, 648);
+        for (int i = 0; i < 648; ++i) input.at(0, i) = feat[i];
+        Matrix test_policy; float test_value;
+        new_net.forward(input, test_policy, test_value);
+        float entropy = 0.0f;
+        for (int i = 0; i < 81; ++i) {
+            float p = test_policy.at(0, i);
+            if (p > 1e-9f) entropy -= p * std::log(p);
+        }
+        std::cout << "New net policy entropy: " << entropy << std::endl;
+        // 同时检查最佳网络（随机）的熵作为基准
+        best_net.forward(input, test_policy, test_value);
+        float entropy_best = 0.0f;
+        for (int i = 0; i < 81; ++i) {
+            float p = test_policy.at(0, i);
+            if (p > 1e-9f) entropy_best -= p * std::log(p);
+        }
+        std::cout << "Best net policy entropy: " << entropy_best << std::endl;
         // ====== 评估 ======
         evals_total = eval_games * 2;
         evals_done = 0;
