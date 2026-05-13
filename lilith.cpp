@@ -248,7 +248,8 @@ float Network::train(const Matrix& input, const std::vector<float>& pi, float z,
     float v = value;                             // 已经是 tanh 后的值
     float dL_dv = 2.0f * (v - z);                // 对 value 的梯度
     float tanh_deriv = 1.0f - v * v;             // tanh 的导数
-    float d_value_raw_val = dL_dv * tanh_deriv;  // 对 value_raw 的梯度
+    //float d_value_raw_val = dL_dv * tanh_deriv;  // 对 value_raw 的梯度
+    float d_value_raw_val = 0.0f;   // 冻结价值头，只训练策略头
     Matrix d_value_raw(1, 1);
     d_value_raw.at(0, 0) = d_value_raw_val;
 

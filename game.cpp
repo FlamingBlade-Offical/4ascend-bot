@@ -466,8 +466,8 @@ int play_one_game(Network& net1, Network& net2) {
     game.init();
     while (!game.game_end_check().first) {
         auto pi = (game.player_turn == 1) ?
-            mcts_search(game, 1, net1, 800, 2.0f, false) :
-            mcts_search(game, 2, net2, 800, 2.0f, false);
+            mcts_search(game, 1, net1, 1200, 2.0f, false) :
+            mcts_search(game, 2, net2, 1200, 2.0f, false);
         int best_idx = 0;
         float best_p = pi[0];
         for (int i = 1; i < 81; ++i) {
@@ -521,13 +521,13 @@ int main() {
 
     const int games_per_iter = 180;   // 适当恢复局数，保证数据量
     const int eval_games = 80;       // 匹配局数，保持评估稳定
-    const int epochs = 2;
+    const int epochs = 5;
     const int warmup_iterations = 0; // 前 3 个迭代强制更新
     int consecutive_accepts = 0;
 
     for (int iter = 0; ; ++iter) {
         std::cout << "Best net initial weight: " << best_net.layer1.W.at(0,0) << std::endl;
-        float lr = 0.00005 * std::pow(0.95, iter / 20); // 微调学习率，初期更快学习
+        float lr = 0.0001 * pow(0.95, iter/5); // 微调学习率，初期更快学习
 
         // ====== 自对弈 ======
         games_total = games_per_iter;
@@ -654,9 +654,10 @@ int main() {
         std::cout << "New net (Black) win rate: " << black_win_rate
                   << ", (White) win rate: " << white_win_rate << std::endl;
 
-        float threshold = 0.45f;
-        //if (iter >= 5 + warmup_iterations) threshold = 0.50f;
-       // if (iter >= 10 + warmup_iterations) threshold = 0.55f;
+        float threshold = 0.40f;
+        if (iter >= 3 + warmup_iterations) threshold = 0.50f;
+        if (iter >= 5 + warmup_iterations) threshold = 0.50f;
+        if (iter >= 10 + warmup_iterations) threshold = 0.55f;
         std :: cout << "Threshold is = " << threshold << endl;
         // 后续可继续提高
         if (black_win_rate > threshold && white_win_rate > threshold) {
