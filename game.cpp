@@ -466,8 +466,8 @@ int play_one_game(Network& net1, Network& net2) {
     game.init();
     while (!game.game_end_check().first) {
         auto pi = (game.player_turn == 1) ?
-            mcts_search(game, 1, net1, 3200, 2.0f, false) :
-            mcts_search(game, 2, net2, 3200, 2.0f, false);
+            mcts_search(game, 1, net1, 1600, 2.0f, false) :
+            mcts_search(game, 2, net2, 1600, 2.0f, false);
         int best_idx = 0;
         float best_p = pi[0];
         for (int i = 1; i < 81; ++i) {
@@ -535,7 +535,7 @@ int main() {
         for (int g = 0; g < games_per_iter; ++g) {
             self_play_futures.emplace_back(
                 launch_limited([&]() {
-                    auto res = self_play_one_game(best_net, 6400);
+                    auto res = self_play_one_game(best_net, 1600);
                     games_done++;
                     print_progress("Self-Play", games_done.load(), games_total.load());
                     return res;
@@ -548,13 +548,13 @@ int main() {
             auto game_data = fut.get();
             for (auto& sample : game_data) {
                 all_data.push_back(sample);
-                /*for (int k = 0; k < 3; ++k) {
+                for (int k = 0; k < 3; ++k) {
                     TrainingSample aug = sample;
                     int rot = rng() % 4;
                     bool mirror = rng() % 2;
                     apply_transform(aug.features, aug.pi, rot, mirror);
                     all_data.push_back(aug);
-                }*/
+                }
             }
         }
         std::cout << std::endl; // 自对弈进度结束换行
@@ -569,7 +569,7 @@ int main() {
         // ====== 训练 ======
         Network new_net = best_net;
         for (int epoch = 0; epoch < epochs; ++epoch) {
-            int batch_size = std::min(4096, (int)replay_buffer.size());
+            int batch_size = std::min(25000, (int)replay_buffer.size());
             std::vector<int> indices(replay_buffer.size());
             std::iota(indices.begin(), indices.end(), 0);
             std::shuffle(indices.begin(), indices.end(), rng);
