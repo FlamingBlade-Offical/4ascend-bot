@@ -466,8 +466,8 @@ int play_one_game(Network& net1, Network& net2) {
     game.init();
     while (!game.game_end_check().first) {
         auto pi = (game.player_turn == 1) ?
-            mcts_search(game, 1, net1, 1200, 2.0f, false) :
-            mcts_search(game, 2, net2, 1200, 2.0f, false);
+            mcts_search(game, 1, net1, 800, 2.0f, false) :
+            mcts_search(game, 2, net2, 800, 2.0f, false);
         int best_idx = 0;
         float best_p = pi[0];
         for (int i = 1; i < 81; ++i) {
@@ -519,15 +519,15 @@ int main() {
         std::cout << "No saved network, starting from scratch.\n";
     }
 
-    const int games_per_iter = 60;   // 适当恢复局数，保证数据量
-    const int eval_games = 60;       // 匹配局数，保持评估稳定
-    const int epochs = 5;            // 保持 5 个 epoch 不变
-    const int warmup_iterations = 0; // 前2个迭代强制更新
+    const int games_per_iter = 120;   // 适当恢复局数，保证数据量
+    const int eval_games = 80;       // 匹配局数，保持评估稳定
+    const int epochs = 3;          
+    const int warmup_iterations = 3; // 前 3 个迭代强制更新
     int consecutive_accepts = 0;
 
     for (int iter = 0; ; ++iter) {
         std::cout << "Best net initial weight: " << best_net.layer1.W.at(0,0) << std::endl;
-        float lr = 0.0001 * std::pow(0.96, iter); // 微调学习率，初期更快学习
+        float lr = 0.00005 * std::pow(0.95, iter); // 微调学习率，初期更快学习
 
         // ====== 自对弈 ======
         games_total = games_per_iter;
@@ -536,7 +536,7 @@ int main() {
         for (int g = 0; g < games_per_iter; ++g) {
             self_play_futures.emplace_back(
                 launch_limited([&]() {
-                    auto res = self_play_one_game(best_net, 1200);
+                    auto res = self_play_one_game(best_net, 800);
                     games_done++;
                     print_progress("Self-Play", games_done.load(), games_total.load());
                     return res;
@@ -550,13 +550,13 @@ int main() {
             for (auto& sample : game_data) {
                 if (iter < warmup_iterations) sample.z = 0.0f; // 预热期置零
                 all_data.push_back(sample);
-                /*for (int k = 0; k < 3; ++k) {
+                for (int k = 0; k < 3; ++k) {
                     TrainingSample aug = sample;
                     int rot = rng() % 4;
                     bool mirror = rng() % 2;
                     apply_transform(aug.features, aug.pi, rot, mirror);
                     all_data.push_back(aug);
-                }*/
+                }
             }
         }
         std::cout << std::endl; // 自对弈进度结束换行
@@ -613,22 +613,6 @@ int main() {
             best_net = new_net;
             std::cout << "Warmup iteration " << iter 
                 << ": best_net forced updated (no eval)." << std::endl;
-                try {
-                best_net.save("best_net.bin");
-                std::cout << "Network saved to best_net.bin\n";
-                system("mkdir -p net");
-                try {
-                    std::string backup_name = "net/best_net_iter_" + std::to_string(iter) + ".bin";
-                    std::ifstream src("best_net.bin", std::ios::binary);
-                    std::ofstream dst(backup_name, std::ios::binary);
-                    dst << src.rdbuf();
-                    std::cout << "Backup saved to " << backup_name << "\n";
-                } catch (...) {
-                    std::cout << "Backup failed.\n";
-                }
-            } catch (...) {
-                std::cout << "Save failed.\n";
-            }
             replay_buffer.clear();
             // 这里可以选择保存模型，但不必强制
             continue; // 跳过评估，直接进入下一轮
