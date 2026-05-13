@@ -139,11 +139,9 @@ std::vector<float> encode(const GameState& state) {
     offset = 7 * 81;
     for (int k = offset; k < offset + 81; ++k)
         features[k] = 0.0f;  // 默认0
-    if (state.ascend_turn != 0) {
-        int attacker = state.ascend_turn;
-        for (auto& [cx, cy] : state.ascend_player[attacker].slots)
-            features[offset + cx * 9 + cy] = 1.0f;
-    }
+    int opponent = 3 - state.player_turn;
+    for (auto& [cx, cy] : state.ascend_player[opponent].slots)
+        features[offset + cx * 9 + cy] = 1.0f;
     return features;
 }
 
