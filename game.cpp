@@ -521,7 +521,7 @@ int main() {
 
     const int games_per_iter = 120;   // 适当恢复局数，保证数据量
     const int eval_games = 80;       // 匹配局数，保持评估稳定
-    const int epochs = 0;          
+    const int epochs = 5;
     const int warmup_iterations = 3; // 前 3 个迭代强制更新
     int consecutive_accepts = 0;
 
@@ -654,7 +654,12 @@ int main() {
         std::cout << "New net (Black) win rate: " << black_win_rate
                   << ", (White) win rate: " << white_win_rate << std::endl;
 
-        if (black_win_rate > 0.6f && white_win_rate > 0.6f) {
+        float threshold = 0.45f;
+        if (iter >= 5 + warmup_iterations) threshold = 0.50f;
+        if (iter >= 10 + warmup_iterations) threshold = 0.55f;
+        std :: cout << "Threshold is = " << threshold << endl;
+        // 后续可继续提高
+        if (black_win_rate > threshold && white_win_rate > threshold) {
             best_net = new_net;
             try {
                 best_net.save("best_net.bin");
