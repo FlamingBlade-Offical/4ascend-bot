@@ -519,14 +519,14 @@ int main() {
         std::cout << "No saved network, starting from scratch.\n";
     }
 
-    const int games_per_iter = 100;   // 适当恢复局数，保证数据量
-    const int eval_games = 50;       // 匹配局数，保持评估稳定
+    const int games_per_iter = 120;   // 适当恢复局数，保证数据量
+    const int eval_games = 80;       // 匹配局数，保持评估稳定
     const int epochs = 5;            // 保持 5 个 epoch 不变
     int consecutive_accepts = 0;
 
     for (int iter = 0; ; ++iter) {
         std::cout << "Best net initial weight: " << best_net.layer1.W.at(0,0) << std::endl;
-        float lr = 0.00005 * std::pow(0.95, iter); // 起步慢，衰减也慢
+        float lr = 0.0001 * std::pow(0.96, iter); // 微调学习率，初期更快学习
 
         // ====== 自对弈 ======
         games_total = games_per_iter;
@@ -623,7 +623,7 @@ int main() {
         std::cout << "New net (Black) win rate: " << black_win_rate
                   << ", (White) win rate: " << white_win_rate << std::endl;
 
-        if (black_win_rate > 0.40f && white_win_rate > 0.40f) {
+        if (black_win_rate > 0.45f && white_win_rate > 0.45f) {
             best_net = new_net;
             try {
                 best_net.save("best_net.bin");
