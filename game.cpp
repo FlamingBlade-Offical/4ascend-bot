@@ -466,8 +466,8 @@ int play_one_game(Network& net1, Network& net2) {
     game.init();
     while (!game.game_end_check().first) {
         auto pi = (game.player_turn == 1) ?
-            mcts_search(game, 1, net1, 1200, 2.0f, false) :
-            mcts_search(game, 2, net2, 1200, 2.0f, false);
+            mcts_search(game, 1, net1, 800, 2.0f, false) :
+            mcts_search(game, 2, net2, 800, 2.0f, false);
         int best_idx = 0;
         float best_p = pi[0];
         for (int i = 1; i < 81; ++i) {
@@ -527,7 +527,7 @@ int main() {
 
     for (int iter = 0; ; ++iter) {
         std::cout << "Best net initial weight: " << best_net.layer1.W.at(0,0) << std::endl;
-        float lr = 0.0001 * pow(0.95, iter/5); // 微调学习率，初期更快学习
+        float lr = 0.0001 * pow(0.95, iter / 5); // 微调学习率，初期更快学习
 
         // ====== 自对弈 ======
         games_total = games_per_iter;
@@ -654,8 +654,8 @@ int main() {
         std::cout << "New net (Black) win rate: " << black_win_rate
                   << ", (White) win rate: " << white_win_rate << std::endl;
 
-        float threshold = 0.40f;
-        if (iter >= 3 + warmup_iterations) threshold = 0.50f;
+        float threshold = 0.45f;
+        //if (iter >= 3 + warmup_iterations) threshold = 0.50f;
         if (iter >= 5 + warmup_iterations) threshold = 0.50f;
         if (iter >= 10 + warmup_iterations) threshold = 0.55f;
         std :: cout << "Threshold is = " << threshold << endl;
