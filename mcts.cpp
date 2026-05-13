@@ -32,8 +32,8 @@ MCTSNode* select(MCTSNode* root, float c_puct) {
         float best_ucb = -1e9;
         MCTSNode* best_child = nullptr;
         for (MCTSNode* child : node->children) {
-            float Q = (child->N > 0) ? child->W / child->N : 0.0f;
-            float ucb = Q + c_puct * child->P * std::sqrt(node->N) / (1.0f + child->N);
+            float Q = (child->N > 0) ? -(child->W / child->N) : 0.0f;
+            float ucb = Q + c_puct * child->P * std::sqrt(node->N + 1.0f) / (1.0f + child->N);
             if (ucb > best_ucb) {
                 best_ucb = ucb;
                 best_child = child;
@@ -50,17 +50,25 @@ void backup(MCTSNode* leaf, float v) {
     MCTSNode* node = leaf;
     while (node != nullptr) {
         node->N++;
+        v = std::max(-1.0f, std::min(1.0f, v));
         node->W += v;
-        v = -v;                  // 切换到对手视角
+        v = -v;              // 切换到对手视角
         node = node->parent;
     }
 }
 
 // 扩展：对叶节点用网络评估，创建所有合法子节点，并将先验概率填入子节点，然后立即回传网络价值
 void expand(MCTSNode* leaf, Network& net) {
+
     // 获取合法走法
     auto moves = leaf->state.get_legal_moves();
-    if (moves.empty() || leaf->state.game_end_check().first) return;  // 终局无扩展
+    if (moves.empty() || leaf->state.game_end_check().first) {
+        leaf->expanded = true;
+        int winner = leaf->state.game_end_check().second;
+        float final_v = (winner == leaf->player) ? 1.0f : -1.0f;
+        backup(leaf, final_v);
+        return;
+    }
 
     // 编码当前局面
     std::vector<float> features = encode(leaf->state);

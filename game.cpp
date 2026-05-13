@@ -654,10 +654,10 @@ int main() {
         std::cout << "New net (Black) win rate: " << black_win_rate
                   << ", (White) win rate: " << white_win_rate << std::endl;
 
-        float threshold = 0.45f;
+        float threshold = 0.55f;
         //if (iter >= 3 + warmup_iterations) threshold = 0.50f;
-        if (iter >= 5 + warmup_iterations) threshold = 0.50f;
-        if (iter >= 10 + warmup_iterations) threshold = 0.55f;
+       // if (iter >= 5 + warmup_iterations) threshold = 0.50f;
+       //if (iter >= 10 + warmup_iterations) threshold = 0.55f;
         std :: cout << "Threshold is = " << threshold << endl;
         // 后续可继续提高
         if (black_win_rate > threshold && white_win_rate > threshold) {
