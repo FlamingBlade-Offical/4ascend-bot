@@ -522,6 +522,7 @@ int main() {
     const int games_per_iter = 120;   // 适当恢复局数，保证数据量
     const int eval_games = 80;       // 匹配局数，保持评估稳定
     const int epochs = 5;            // 保持 5 个 epoch 不变
+    const int warmup_iterations = 2; // 前2个迭代强制更新
     int consecutive_accepts = 0;
 
     for (int iter = 0; ; ++iter) {
@@ -547,14 +548,15 @@ int main() {
         for (auto& fut : self_play_futures) {
             auto game_data = fut.get();
             for (auto& sample : game_data) {
+                if (iter < warmup_iterations) sample.z = 0.0f; // 预热期置零
                 all_data.push_back(sample);
-                for (int k = 0; k < 3; ++k) {
+                /*for (int k = 0; k < 3; ++k) {
                     TrainingSample aug = sample;
                     int rot = rng() % 4;
                     bool mirror = rng() % 2;
                     apply_transform(aug.features, aug.pi, rot, mirror);
                     all_data.push_back(aug);
-                }
+                }*/
             }
         }
         std::cout << std::endl; // 自对弈进度结束换行
@@ -607,6 +609,30 @@ int main() {
             if (p > 1e-9f) entropy_best -= p * std::log(p);
         }
         std::cout << "Best net policy entropy: " << entropy_best << std::endl;
+        if (iter < warmup_iterations) {
+            best_net = new_net;
+            std::cout << "Warmup iteration " << iter 
+                << ": best_net forced updated (no eval)." << std::endl;
+                try {
+                best_net.save("best_net.bin");
+                std::cout << "Network saved to best_net.bin\n";
+                system("mkdir -p net");
+                try {
+                    std::string backup_name = "net/best_net_iter_" + std::to_string(iter) + ".bin";
+                    std::ifstream src("best_net.bin", std::ios::binary);
+                    std::ofstream dst(backup_name, std::ios::binary);
+                    dst << src.rdbuf();
+                    std::cout << "Backup saved to " << backup_name << "\n";
+                } catch (...) {
+                    std::cout << "Backup failed.\n";
+                }
+            } catch (...) {
+                std::cout << "Save failed.\n";
+            }
+            replay_buffer.clear();
+            // 这里可以选择保存模型，但不必强制
+            continue; // 跳过评估，直接进入下一轮
+        }
         // ====== 评估 ======
         evals_total = eval_games * 2;
         evals_done = 0;
