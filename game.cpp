@@ -466,8 +466,8 @@ int play_one_game(Network& net1, Network& net2) {
     game.init();
     while (!game.game_end_check().first) {
         auto pi = (game.player_turn == 1) ?
-            mcts_search(game, 1, net1, 1600, 2.0f, false) :
-            mcts_search(game, 2, net2, 1600, 2.0f, false);
+            mcts_search(game, 1, net1, 1200, 2.0f, false) :
+            mcts_search(game, 2, net2, 1200, 2.0f, false);
         int best_idx = 0;
         float best_p = pi[0];
         for (int i = 1; i < 81; ++i) {
@@ -519,10 +519,10 @@ int main() {
         std::cout << "No saved network, starting from scratch.\n";
     }
 
-    const int games_per_iter = 120;   // 适当恢复局数，保证数据量
-    const int eval_games = 80;       // 匹配局数，保持评估稳定
+    const int games_per_iter = 60;   // 适当恢复局数，保证数据量
+    const int eval_games = 60;       // 匹配局数，保持评估稳定
     const int epochs = 5;            // 保持 5 个 epoch 不变
-    const int warmup_iterations = 2; // 前2个迭代强制更新
+    const int warmup_iterations = 0; // 前2个迭代强制更新
     int consecutive_accepts = 0;
 
     for (int iter = 0; ; ++iter) {
@@ -536,7 +536,7 @@ int main() {
         for (int g = 0; g < games_per_iter; ++g) {
             self_play_futures.emplace_back(
                 launch_limited([&]() {
-                    auto res = self_play_one_game(best_net, 1600);
+                    auto res = self_play_one_game(best_net, 1200);
                     games_done++;
                     print_progress("Self-Play", games_done.load(), games_total.load());
                     return res;
