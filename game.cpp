@@ -10,6 +10,8 @@
 #include <atomic>
 #include <chrono>
 #include <thread>
+#include <mutex>
+#include <iomanip>
 using namespace std;
 
 thread_local std::mt19937 rng(std::random_device{}());
@@ -28,6 +30,29 @@ auto launch_limited(F&& f) {
         active_tasks--;
         return result;
     });
+}
+
+// ================= 进度条 =================
+std::atomic<int> games_done{0};
+std::atomic<int> games_total{0};
+std::atomic<int> evals_done{0};
+std::atomic<int> evals_total{0};
+std::mutex progress_mutex;
+
+void print_progress(const char* label, int done, int total) {
+    if (total <= 0) return;
+    std::lock_guard<std::mutex> lock(progress_mutex);
+    int bar_width = 30;
+    float ratio = (float)done / total;
+    int pos = int(bar_width * ratio);
+    std::cout << "\r" << label << " [";
+    for (int i = 0; i < bar_width; ++i) {
+        if (i < pos) std::cout << "=";
+        else if (i == pos) std::cout << ">";
+        else std::cout << " ";
+    }
+    std::cout << "] " << std::setw(3) << int(ratio * 100) << "% ("
+              << done << "/" << total << ")" << std::flush;
 }
 
 // ================= 基本规则 =================
@@ -186,7 +211,6 @@ vector<pair<int, int>> GameState::p_scan_pos(bool flag3, bool flag4) {
     return result;
 }
 
-// 修复：增加 self / foe 参数，不再从 player_turn 推断
 vector<pair<int, int>> GameState::p_scan_score(
     const vector<pair<int, int>>& points, bool atk, int count,
     bool flag, bool flag2, bool flag4, int self, int foe)
@@ -297,9 +321,8 @@ vector<pair<int, int>> GameState::p_scan_score(
 
 void GameState::generate_plant() {
     turn_count_plant++;
-    // ★ 核心修复：self 应为植物生成后即将行动的一方（3 - player_turn）
-    int self = 3 - player_turn;   // 即将落子方
-    int foe  = player_turn;       // 刚行动完的一方
+    int self = 3 - player_turn;
+    int foe  = player_turn;
 
     if (ascend_status == 1) return;
     bool atk = (ascend_status == 2);
@@ -319,20 +342,19 @@ void GameState::generate_plant() {
 
     int plant_count = (turn_count_plant >= 65) ? 3 : 2;
     if (plant_stone_count >= 44 && over_status == 0) over_status = 1;
-    if (over_status == 1 && hp[self] <= hp[foe]) over_status = 2; // 此处也改用 self/foe 而非 player_turn
+    if (over_status == 1 && hp[self] <= hp[foe]) over_status = 2;
     if (over_status != 0 && plant_stone_count < 22) over_status = 0;
 
     bool flag3 = atk;
     bool flag4 = atk && unascend_charge <= 0;
-    bool flag = unascend_chargef[self] > 0;      // 修正：用 self 而非 player_turn
-    bool flag2 = unascend_chargef[foe] > 0;       // 修正：用 foe
-    if (unascend_chargef[self] > 0) atk = false;  // 修正
+    bool flag = unascend_chargef[self] > 0;
+    bool flag2 = unascend_chargef[foe] > 0;
+    if (unascend_chargef[self] > 0) atk = false;
 
     auto cand = p_scan_pos(flag3, flag4);
     if (!cand.empty()) {
         if (over_status == 2) plant_count++;
         plant_count = min(plant_count, (int)cand.size());
-        // 传入 self 和 foe
         auto selected = p_scan_score(cand, atk, plant_count, flag, flag2, flag4, self, foe);
         for (auto& [x, y] : selected) plants[x][y]++;
     }
@@ -348,11 +370,11 @@ void GameState::generate_plant() {
         float val = 12.5f + unascend_charge + (25 - unascend_charge) * 0.4f;
         val = max(12.5f, min(val, 25.0f));
         unascend_charge = (int)ceil(val);
-        // ★ 充能始终加给 self（进攻方，即即将落子方），符合官方逻辑
         unascend_chargef[self] = max(unascend_chargef[self], (over_status != 0) ? 4 : 9);
         just_unascend = true;
     }
 }
+
 bool GameState::apply_move(int x, int y) {
     if (!coords_check(x, y) || board[x][y] != 0) return false;
     board[x][y] = player_turn;
@@ -364,7 +386,7 @@ bool GameState::apply_move(int x, int y) {
         if (ascend_turn == 0) {
             ascend_turn = player_turn;
             player_turn = 3 - player_turn;
-            ascend_status = 1; // START
+            ascend_status = 1;
             return true;
         }
     }
@@ -373,7 +395,7 @@ bool GameState::apply_move(int x, int y) {
         int decrease = 0;
         for (auto& [cx, cy] : ascend_player[ascend_turn].slots) {
             if (cx == x && cy == y) {
-                decrease = 1 + plants[cx][cy]; // ★ 多层植物修正
+                decrease = 1 + plants[cx][cy];
                 break;
             }
         }
@@ -385,31 +407,32 @@ bool GameState::apply_move(int x, int y) {
         cnt[1] -= ascend_player[1].slots.size();
         cnt[2] -= ascend_player[2].slots.size();
         ascend_player[1].init(); ascend_player[2].init();
-        ascend_status = 2; // END
-        generate_plant();          // ★ 此处 plant 生成时已使用修正后的 self
+        ascend_status = 2;
+        generate_plant();
         ascend_status = 0;
         ascend_turn = 0;
     } else {
-        generate_plant();          // 普通回合植物生成
+        generate_plant();
     }
     player_turn = 3 - player_turn;
     return true;
 }
+
 // ================= 训练模块 =================
 struct TrainingSample {
     std::vector<float> features;
     std::vector<float> pi;
     float z;
 };
+
 std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
     GameState game;
     game.init();
     std::vector<std::pair<GameState, std::vector<float>>> history;
 
     while (!game.game_end_check().first) {
-        auto pi = mcts_search(game, game.player_turn, net, sims);
-        history.push_back({game.clone(), pi});
-
+        auto pi = mcts_search(game, game.player_turn, net, sims);  // ① 当前玩家 A 通过搜索得到策略 pi
+        history.push_back({game.clone(), pi});                      // ② 将当前状态克隆并保存（此时 player_turn 是 A） 
         int sampled_idx;
         if (game.turn_number < 20) {
             std::discrete_distribution<int> dist_pi(pi.begin(), pi.end());
@@ -427,11 +450,6 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
         int x = sampled_idx / 9;
         int y = sampled_idx % 9;
         game.apply_move(x, y);
-        /*cout << "Turn " << game.turn_number
-        << " player " << game.player_turn
-        << " move (" << x << "," << y << ")"
-        << " cnt: " << game.cnt[1] << "/" << game.cnt[2]
-        << " hp: " << game.hp[1] << "/" << game.hp[2] << endl;*/
     }
 
     int winner = game.game_end_check().second;
@@ -440,9 +458,6 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
         float z = (state.player_turn == winner) ? 1.0f : -1.0f;
         samples.push_back({encode(state), pi, z});
     }
-    //cout << "Winner: " << winner << " | z:";
-    //for (auto& s : samples) cout << " " << s.z;
-    //cout << endl;
     return samples;
 }
 
@@ -451,8 +466,8 @@ int play_one_game(Network& net1, Network& net2) {
     game.init();
     while (!game.game_end_check().first) {
         auto pi = (game.player_turn == 1) ?
-            mcts_search(game, 1, net1, 1200, 2.0f, false) :
-            mcts_search(game, 2, net2, 1200, 2.0f, false);
+            mcts_search(game, 1, net1, 3200, 2.0f, false) :
+            mcts_search(game, 2, net2, 3200, 2.0f, false);
         int best_idx = 0;
         float best_p = pi[0];
         for (int i = 1; i < 81; ++i) {
@@ -492,7 +507,7 @@ void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, 
 }
 
 std::vector<TrainingSample> replay_buffer;
-const int replay_capacity = 16384;
+const int replay_capacity = 100000;
 
 int main() {
     srand(time(nullptr));
@@ -504,21 +519,31 @@ int main() {
         std::cout << "No saved network, starting from scratch.\n";
     }
 
-    const int games_per_iter = 80;
-    const int eval_games = 100;
-    const int epochs = 5;
+    const int games_per_iter = 100;   // 适当恢复局数，保证数据量
+    const int eval_games = 50;       // 匹配局数，保持评估稳定
+    const int epochs = 5;            // 保持 5 个 epoch 不变
     int consecutive_accepts = 0;
 
     for (int iter = 0; ; ++iter) {
-        float lr = std::max(0.0000005f, 0.00005f * (float)std::pow(0.75, iter / 5));
-        std::vector<TrainingSample> all_data;
+        std::cout << "Best net initial weight: " << best_net.layer1.W.at(0,0) << std::endl;
+        float lr = 0.00005 * std::pow(0.95, iter); // 起步慢，衰减也慢
+
+        // ====== 自对弈 ======
+        games_total = games_per_iter;
+        games_done = 0;
         std::vector<std::future<std::vector<TrainingSample>>> self_play_futures;
         for (int g = 0; g < games_per_iter; ++g) {
             self_play_futures.emplace_back(
-                launch_limited([&]() { return self_play_one_game(best_net, 2400); })
+                launch_limited([&]() {
+                    auto res = self_play_one_game(best_net, 6400);
+                    games_done++;
+                    print_progress("Self-Play", games_done.load(), games_total.load());
+                    return res;
+                })
             );
         }
 
+        std::vector<TrainingSample> all_data;
         for (auto& fut : self_play_futures) {
             auto game_data = fut.get();
             for (auto& sample : game_data) {
@@ -532,12 +557,16 @@ int main() {
                 }*/
             }
         }
+        std::cout << std::endl; // 自对弈进度结束换行
+
         for (auto& sample : all_data) {
             replay_buffer.push_back(sample);
         }
         while (replay_buffer.size() > replay_capacity) {
             replay_buffer.erase(replay_buffer.begin());
         }
+
+        // ====== 训练 ======
         Network new_net = best_net;
         for (int epoch = 0; epoch < epochs; ++epoch) {
             int batch_size = std::min(4096, (int)replay_buffer.size());
@@ -556,14 +585,28 @@ int main() {
                       << " avg loss: " << total_loss / batch_size << std::endl;
         }
         std::cout << "Sample weight: " << new_net.layer1.W.at(0,0) << std::endl;
+
+        // ====== 评估 ======
+        evals_total = eval_games * 2;
+        evals_done = 0;
         int wins_black = 0, wins_white = 0;
         std::vector<std::future<int>> futures_black, futures_white;
         for (int g = 0; g < eval_games; ++g) {
             futures_black.emplace_back(
-                launch_limited([&]() { return play_one_game(best_net, new_net); })
+                launch_limited([&]() {
+                    int res = play_one_game(best_net, new_net);
+                    evals_done++;
+                    print_progress("Eval      ", evals_done.load(), evals_total.load());
+                    return res;
+                })
             );
             futures_white.emplace_back(
-                launch_limited([&]() { return play_one_game(new_net, best_net); })
+                launch_limited([&]() {
+                    int res = play_one_game(new_net, best_net);
+                    evals_done++;
+                    print_progress("Eval      ", evals_done.load(), evals_total.load());
+                    return res;
+                })
             );
         }
 
@@ -573,13 +616,14 @@ int main() {
         for (auto& fut : futures_white) {
             if (fut.get() == 1) wins_white++;
         }
+        std::cout << std::endl; // 评估进度结束换行
 
         float black_win_rate = (float)wins_black / eval_games;
         float white_win_rate = (float)wins_white / eval_games;
         std::cout << "New net (Black) win rate: " << black_win_rate
                   << ", (White) win rate: " << white_win_rate << std::endl;
 
-        if (black_win_rate > 0.6f && white_win_rate > 0.6f) {
+        if (black_win_rate > 0.40f && white_win_rate > 0.40f) {
             best_net = new_net;
             try {
                 best_net.save("best_net.bin");
@@ -603,5 +647,6 @@ int main() {
             std::cout << "Network rejected.\n";
         }
     }
+   
     return 0;
 }
