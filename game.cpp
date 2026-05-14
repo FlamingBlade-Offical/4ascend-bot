@@ -587,7 +587,7 @@ int main() {
                         TrainingSample aug = sample;
                         apply_transform(aug.features, aug.pi, rot, mirror);
                         Matrix input(1, 648);
-                        for (int j = 0; j < 648; ++j) input.at(0, j) = sample.features[j];
+                        for (int j = 0; j < 648; ++j) input.at(0, j) = aug.features[j];
                         total_loss += new_net.train(input, aug.pi, aug.z, opt);
                     }
                 }
