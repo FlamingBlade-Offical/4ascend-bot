@@ -442,7 +442,7 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
         history.push_back({game.clone(), pi});
 
         int sampled_idx;
-        if (game.turn_number < 30) {
+        if (game.turn_number < 20) {
             std::discrete_distribution<int> dist_pi(pi.begin(), pi.end());
             sampled_idx = dist_pi(rng);
         } else {
@@ -477,7 +477,9 @@ int play_one_game(Network& net1, Network& net2, int sims = 1200) {
     return game.game_end_check().second; // 1 or 2
 }
 
-void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, int mirror) {
+void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, bool mirror) {
+    if (rot == 0 && !mirror) return;
+
     auto transform81 = [rot, mirror](std::vector<float>& arr) {
         std::vector<float> temp(81);
         for (int i = 0; i < 9; ++i) {
@@ -485,17 +487,10 @@ void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, 
                 int ni = i, nj = j;
                 if (mirror) nj = 8 - j;
                 int idx_new;
-                /*if (rot == 0)      idx_new = ni * 9 + nj;
-                else if (rot == 1) idx_new = (8 - ni) * 9 + nj;
-                else if (rot == 2) idx_new = nj * 9 + ni;
-                else               idx_new = nj * 9 + (8 - ni);*/
-                for (int r = 0; r < rot; ++r) {
-                    int ti = nj;
-                    int tj = 8 - ni;
-                    ni = ti;
-                    nj = tj;
-                }
-                idx_new = ni * 9 + nj;
+                if (rot == 0)      idx_new = ni * 9 + nj;
+                else if (rot == 1) idx_new = nj * 9 + (8 - ni);
+                else if (rot == 2) idx_new = (8 - ni) * 9 + (8 - nj);
+                else               idx_new = (8 - nj) * 9 + ni;
                 temp[idx_new] = arr[i * 9 + j];
             }
         }
@@ -511,7 +506,7 @@ void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, 
 }
 
 std::vector<TrainingSample> replay_buffer;
-const int replay_capacity = 80000;
+const int replay_capacity = 100000;
 
 int main() {
     Network best_net;
@@ -522,9 +517,9 @@ int main() {
         std::cout << "No saved network, starting from scratch.\n";
     }
 
-    const int games_per_iter = 256;
+    const int games_per_iter = 180;
     const int eval_games = 200;     // 每边 200，总 400
-    const int epochs = 1;
+    const int epochs = 3;
     const int warmup_iterations = 0;
 
     for (int iter = 0; ; ++iter) {
@@ -532,8 +527,8 @@ int main() {
 
         // lr schedule (你选的稳健版)
         double lr;
-        if (iter < 30) lr = 1e-4;
-        else lr = 1e-4 * std::pow(0.95, (iter - 30) / 5.0);
+        if (iter < 30) lr = 2e-4;
+        else lr = 2e-4 * std::pow(0.95, (iter - 30) / 5.0);
 
         // ====== 自对弈 ======
         games_total = games_per_iter;
@@ -545,7 +540,7 @@ int main() {
             self_play_futures.emplace_back(
                 launch_limited([best = best_net]() mutable {
                     // 这里 sims 你现在用 2000；如果你想更均衡算力，可改 1200
-                    auto res = self_play_one_game(best, 1200);
+                    auto res = self_play_one_game(best, 2000);
                     games_done++;
                     print_progress("Self-Play", games_done.load(), games_total.load());
                     return res;
@@ -577,7 +572,7 @@ int main() {
         new_net.set_policy_smoothing(0.02f);
 
         for (int epoch = 0; epoch < epochs; ++epoch) {
-            int batch_size = std::min(2048, (int)replay_buffer.size());
+            int batch_size = std::min(8192, (int)replay_buffer.size());
             std::vector<int> indices(replay_buffer.size());
             std::iota(indices.begin(), indices.end(), 0);
             std::shuffle(indices.begin(), indices.end(), rng);
@@ -587,13 +582,12 @@ int main() {
 
             for (int i = 0; i < batch_size; i++) {
                 auto& sample = replay_buffer[indices[i]];
-                int rot = rng() % 4;
-                int mirror = rng() % 2;
-
-                TrainingSample aug = sample;
-                apply_transform(aug.features, aug.pi, rot, mirror);
                 Matrix input(1, 648);
-                for (int j = 0; j < 648; ++j) input.at(0, j) = aug.features[j];
+                for (int j = 0; j < 648; ++j) input.at(0, j) = sample.features[j];
+                TrainingSample aug = sample;
+                int rot = rng() % 4;
+                bool mirror = rng() % 2;
+                apply_transform(aug.features, aug.pi, rot, mirror);
                 total_loss += new_net.train(input, aug.pi, aug.z, opt);
             }
 
@@ -651,7 +645,7 @@ int main() {
         for (int g = 0; g < eval_games; ++g) {
             futures_black.emplace_back(
                 launch_limited([best = best_net, neu = new_net]() mutable {
-                    int res = play_one_game(best, neu, 1600);
+                    int res = play_one_game(best, neu, 1200);
                     evals_done++;
                     print_progress("Eval      ", evals_done.load(), evals_total.load());
                     return res;
@@ -659,7 +653,7 @@ int main() {
             );
             futures_white.emplace_back(
                 launch_limited([best = best_net, neu = new_net]() mutable {
-                    int res = play_one_game(neu, best, 1600);
+                    int res = play_one_game(neu, best, 1200);
                     evals_done++;
                     print_progress("Eval      ", evals_done.load(), evals_total.load());
                     return res;
