@@ -258,13 +258,13 @@ Matrix Linear::backward(const Matrix& dY, const AdamConfig& opt) {
 
 // ================= Network 实现 =================
 Network::Network()
-    : layer1(648, 768),
-      layer2(768, 768),
-      policy_head(768, 81),
-      value_head(768, 1),
+    : layer1(648, 1024),
+      layer2(1024, 1024),
+      policy_head(1024, 81),
+      value_head(1024, 1),
       // 默认稳定配置（你也可以在训练入口改）
       policy_smooth_eps(0.02f),
-      value_weight(0.25f)
+      value_weight(0.5f)
 {}
 
 void Network::forward(const Matrix& input, Matrix& policy, float& value) {
@@ -341,8 +341,8 @@ float Network::train(const Matrix& input,
     Matrix d_h2_from_policy = policy_head.backward(d_policy_raw, opt);
     Matrix d_h2_from_value  = value_head.backward(d_value_raw, opt);
 
-    Matrix d_h2_post(1, 768);
-    for (int j = 0; j < 768; ++j)
+    Matrix d_h2_post(1, 1024);
+    for (int j = 0; j < 1024; ++j)
         d_h2_post.at(0, j) = d_h2_from_policy.at(0, j) + d_h2_from_value.at(0, j);
 
     // ---- 5) back through ReLU2 ----
