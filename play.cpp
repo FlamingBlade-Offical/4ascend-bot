@@ -433,6 +433,28 @@ bool GameState::apply_move(int x, int y) {
     return true;
 }
 
+// 打印策略分布（81维），显示访问次数最多的前K个动作
+void print_policy(const std::vector<float>& pi) {
+    std::vector<std::pair<float, int>> sorted;
+    for (int i = 0; i < 81; ++i) {
+        sorted.push_back({pi[i], i});
+    }
+    std::sort(sorted.begin(), sorted.end(), std::greater<>());
+
+    std::cout << "Policy top 10:\n";
+    for (int i = 0; i < 10 && i < sorted.size(); ++i) {
+        int idx = sorted[i].second;
+        int x = idx / 9, y = idx % 9;
+        std::cout << "  (" << x << "," << y << "): " << std::fixed << std::setprecision(4) << sorted[i].first << "\n";
+    }
+
+    // 计算熵
+    float entropy = 0.0f;
+    for (float p : pi) {
+        if (p > 1e-9f) entropy -= p * std::log(p);
+    }
+    std::cout << "Policy entropy: " << entropy << "\n";
+}
 int main() {
     // 加载训练好的网络
     Network ai;
@@ -466,49 +488,27 @@ int main() {
     while (game.game_end_check().first == 0) {
         if (game.player_turn == human_player) {
             // 人类回合
-           /* cout << "你的回合，请输入坐标 (x y): ";
+            cout << "你的回合，请输入坐标 (x y): ";
             int x, y;
             cin >> x >> y;
             if (!game.coords_check(x, y) || game.board[x][y] != 0) {
                 cout << "无效走法，请重试\n";
                 continue;
             }
-            game.apply_move(x, y);*/
-            cout << "weaker AI 思考中...\n";
-            // 搜索次数可以调小一点让响应更快（如 200）
-            auto pi = mcts_search(game, game.player_turn, ai, 800, 2.0,false);
-            int best_idx = 0;
-            float best_p = pi[0];
-            for (int i = 1; i < 81; ++i) {
-                if (pi[i] > best_p) {
-                    best_p = pi[i];
-                    best_idx = i;
-                }
-            }
-            int ax = best_idx / 9;
-            int ay = best_idx % 9;
-            cout << "weaker AI 走棋 (" << ax << ", " << ay << ")\n";
-            game.apply_move(ax, ay);
+            game.apply_move(x, y);
         } else {
             // AI 回合
             cout << "Lilith 思考中...\n";
             // 搜索次数可以调小一点让响应更快（如 200）
-            auto pi = mcts_search(game, game.player_turn, ai, 1600, 2.0,false);
-            int best_idx = 0;
-            float best_p = pi[0];
-            for (int i = 1; i < 81; ++i) {
-                if (pi[i] > best_p) {
-                    best_p = pi[i];
-                    best_idx = i;
-                }
-            }
+            auto pi = mcts_search(game, game.player_turn, ai, 800, 2.0,false);
+            int best_idx = int(std::max_element(pi.begin(), pi.end()) - pi.begin());
+            print_policy(pi);
             int ax = best_idx / 9;
             int ay = best_idx % 9;
             cout << "Lilith 走棋 (" << ax << ", " << ay << ")\n";
             game.apply_move(ax, ay);
         }
         game.print_board();
-        getchar();
     }
 
     cout << "游戏结束！";
