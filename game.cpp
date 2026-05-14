@@ -556,7 +556,7 @@ int main() {
                 all_data.push_back(sample);
 
                 // augmentation（你现在是 3 次；更稳可改成 1）
-                for (int k = 0; k < 3; ++k) {
+                for (int k = 0; k < 1; ++k) {
                     TrainingSample aug = sample;
                     int rot = rng() % 4;
                     bool mirror = rng() % 2;
