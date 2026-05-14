@@ -441,56 +441,12 @@ std::vector<TrainingSample> self_play_one_game(Network& net, int sims = 1600) {
         auto pi = mcts_search(game, game.player_turn, net, sims);   // add_noise 默认 true
         history.push_back({game.clone(), pi});
 
-        float temperature;
-
-        // =========================
-        // temperature schedule
-        // =========================
-        if (game.turn_number < 12) {
-            temperature = 1.0f;
-        }
-        else if (game.turn_number < 24) {
-            temperature = 0.5f;
-        }
-        else if (game.turn_number < 36) {
-            temperature = 0.25f;
-        }
-        else {
-            temperature = 0.0f;
-        }
-
         int sampled_idx;
-
-        // =========================
-        // τ = 0 -> greedy
-        // =========================
-        if (temperature <= 1e-6f) {
+        if (game.turn_number < 20) {
+            std::discrete_distribution<int> dist_pi(pi.begin(), pi.end());
+            sampled_idx = dist_pi(rng);
+        } else {
             sampled_idx = int(std::max_element(pi.begin(), pi.end()) - pi.begin());
-        }
-        else {
-            std::vector<float> temp_pi(81, 0.0f);
-
-            float sum = 0.0f;
-
-            for (int i = 0; i < 81; ++i) {
-
-                if (pi[i] <= 0.0f)
-                    continue;
-
-                temp_pi[i] =
-                    std::pow(pi[i], 1.0f / temperature);
-
-                sum += temp_pi[i];
-            }
-        // normalize
-            if (sum > 1e-8f) {
-                for (float& p : temp_pi)
-                    p /= sum;
-            } else {
-                temp_pi = pi;
-            }
-            std::discrete_distribution<int>dist_pi(temp_pi.begin(), temp_pi.end());
-                sampled_idx = dist_pi(rng);
         }
         int x = sampled_idx / 9;
         int y = sampled_idx % 9;
@@ -571,10 +527,8 @@ int main() {
 
         // lr schedule (你选的稳健版)
         double lr;
-        if (iter < 20)
-            lr = 5e-4;
-        else
-            lr = 3e-4;
+        if (iter < 30) lr = 2e-4;
+        else lr = 2e-4 * std::pow(0.95, (iter - 30) / 5.0);
 
         // ====== 自对弈 ======
         games_total = games_per_iter;
@@ -586,7 +540,7 @@ int main() {
             self_play_futures.emplace_back(
                 launch_limited([best = best_net]() mutable {
                     // 这里 sims 你现在用 2000；如果你想更均衡算力，可改 1200
-                    auto res = self_play_one_game(best, 800);
+                    auto res = self_play_one_game(best, 1600);
                     games_done++;
                     print_progress("Self-Play", games_done.load(), games_total.load());
                     return res;
@@ -614,7 +568,7 @@ int main() {
         Network new_net = best_net;
 
         // 这两个是“稳定器”：早期建议保持
-        new_net.set_value_weight(0.6f);
+        new_net.set_value_weight(0.25f);
         new_net.set_policy_smoothing(0.02f);
 
         for (int epoch = 0; epoch < epochs; ++epoch) {
@@ -624,7 +578,7 @@ int main() {
             std::shuffle(indices.begin(), indices.end(), rng);
 
             float total_loss = 0.0f;
-            AdamConfig opt(lr, 0.9f, 0.999f, 1e-8f, 5.0f);
+            AdamConfig opt((float)lr, 0.9f, 0.999f, 1e-8f, 1.0f);
 
             for (int i = 0; i < batch_size; i++) {
                 auto& sample = replay_buffer[indices[i]];
@@ -693,7 +647,7 @@ int main() {
         for (int g = 0; g < eval_games; ++g) {
             futures_black.emplace_back(
                 launch_limited([best = best_net, neu = new_net]() mutable {
-                    int res = play_one_game(best, neu, 800);
+                    int res = play_one_game(best, neu, 1600);
                     evals_done++;
                     print_progress("Eval      ", evals_done.load(), evals_total.load());
                     return res;
@@ -701,7 +655,7 @@ int main() {
             );
             futures_white.emplace_back(
                 launch_limited([best = best_net, neu = new_net]() mutable {
-                    int res = play_one_game(neu, best, 800);
+                    int res = play_one_game(neu, best, 1600);
                     evals_done++;
                     print_progress("Eval      ", evals_done.load(), evals_total.load());
                     return res;
