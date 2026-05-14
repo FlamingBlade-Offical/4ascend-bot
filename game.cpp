@@ -506,7 +506,7 @@ void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, 
 }
 
 std::vector<TrainingSample> replay_buffer;
-const int replay_capacity = 100000;
+const int replay_capacity = 150000;
 
 int main() {
     Network best_net;
@@ -517,7 +517,7 @@ int main() {
         std::cout << "No saved network, starting from scratch.\n";
     }
 
-    const int games_per_iter = 180;
+    const int games_per_iter = 240;
     const int eval_games = 200;     // 每边 200，总 400
     const int epochs = 3;
     const int warmup_iterations = 0;
@@ -540,7 +540,7 @@ int main() {
             self_play_futures.emplace_back(
                 launch_limited([best = best_net]() mutable {
                     // 这里 sims 你现在用 2000；如果你想更均衡算力，可改 1200
-                    auto res = self_play_one_game(best, 2000);
+                    auto res = self_play_one_game(best, 1600);
                     games_done++;
                     print_progress("Self-Play", games_done.load(), games_total.load());
                     return res;
@@ -582,17 +582,19 @@ int main() {
 
             for (int i = 0; i < batch_size; i++) {
                 auto& sample = replay_buffer[indices[i]];
-                Matrix input(1, 648);
-                for (int j = 0; j < 648; ++j) input.at(0, j) = sample.features[j];
-                TrainingSample aug = sample;
-                int rot = rng() % 4;
-                bool mirror = rng() % 2;
-                apply_transform(aug.features, aug.pi, rot, mirror);
-                total_loss += new_net.train(input, aug.pi, aug.z, opt);
+                for (int rot = 0; rot < 4; ++rot) {
+                    for (int mirror = 0; mirror < 2; ++mirror) {
+                        TrainingSample aug = sample;
+                        apply_transform(aug.features, aug.pi, rot, mirror);
+                        Matrix input(1, 648);
+                        for (int j = 0; j < 648; ++j) input.at(0, j) = sample.features[j];
+                        total_loss += new_net.train(input, aug.pi, aug.z, opt);
+                    }
+                }
             }
 
             std::cout << "Iter " << iter << " Epoch " << epoch
-                      << " avg loss: " << total_loss / batch_size << "\n";
+                      << " avg loss: " << total_loss / (batch_size * 8) << "\n";
         }
 
         std::cout << "Sample weight: " << new_net.layer1.W.at(0,0) << "\n";
@@ -645,7 +647,7 @@ int main() {
         for (int g = 0; g < eval_games; ++g) {
             futures_black.emplace_back(
                 launch_limited([best = best_net, neu = new_net]() mutable {
-                    int res = play_one_game(best, neu, 1200);
+                    int res = play_one_game(best, neu, 1600);
                     evals_done++;
                     print_progress("Eval      ", evals_done.load(), evals_total.load());
                     return res;
@@ -653,7 +655,7 @@ int main() {
             );
             futures_white.emplace_back(
                 launch_limited([best = best_net, neu = new_net]() mutable {
-                    int res = play_one_game(neu, best, 1200);
+                    int res = play_one_game(neu, best, 1600);
                     evals_done++;
                     print_progress("Eval      ", evals_done.load(), evals_total.load());
                     return res;

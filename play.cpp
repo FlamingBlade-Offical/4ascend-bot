@@ -500,7 +500,7 @@ int main() {
             // AI 回合
             cout << "Lilith 思考中...\n";
             // 搜索次数可以调小一点让响应更快（如 200）
-            auto pi = mcts_search(game, game.player_turn, ai, 800, 2.0,false);
+            auto pi = mcts_search(game, game.player_turn, ai, 1600, 2.0,false);
             int best_idx = int(std::max_element(pi.begin(), pi.end()) - pi.begin());
             print_policy(pi);
             int ax = best_idx / 9;

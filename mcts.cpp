@@ -300,9 +300,9 @@ std::vector<float> mcts_search(
         !root->children.empty()
     ) {
 
-        const float epsilon = 0.15f;
+        const float epsilon = 0.25f;
 
-        const float alpha = 0.6f;
+        const float alpha = 0.15f;
 
         std::gamma_distribution<float> gamma(alpha, 1.0f);
 
