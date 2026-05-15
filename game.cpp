@@ -550,7 +550,7 @@ void apply_transform(std::vector<float>& feat, std::vector<float>& pi, int rot, 
 }
 
 std::vector<TrainingSample> replay_buffer;
-const int replay_capacity = 150000;
+const int replay_capacity = 400000;
 
 int main() {
     Network best_net;
@@ -570,11 +570,8 @@ int main() {
         std::cout << "Best net initial weight: " << best_net.layer1.W.at(0,0) << "\n";
 
         // lr schedule (你选的稳健版)
-        double lr;
-        if (iter < 20)
-            lr = 5e-4;
-        else
-            lr = 3e-4;
+        double lr = 5e-4;
+        if (iter >= 20) lr = 5e-4 * std::pow(0.95, (iter - 20) / 5.0);
 
         // ====== 自对弈 ======
         games_total = games_per_iter;
@@ -599,10 +596,19 @@ int main() {
             auto game_data = fut.get();
             for (auto& sample : game_data) {
                 if (iter < warmup_iterations) sample.z = 0.0f;
-                all_data.push_back(sample);
+                for (int rot = 0; rot < 4; ++rot) {
+                    for (int mirror = 0; mirror < 2; ++mirror) {
+                        TrainingSample aug = sample;
+                        apply_transform(aug.features, aug.pi, rot, mirror);
+                        all_data.push_back(aug);
+                    }
+                }
             }
         }
         std::cout << "\n";
+
+        std :: cout << "Buffer siz : " << replay_buffer.size() << std :: endl;
+        std :: cout << "Generate new data siz : " << all_data.size() << std :: endl; 
 
         // push into replay
         for (auto& s : all_data) replay_buffer.push_back(std::move(s));
@@ -618,7 +624,7 @@ int main() {
         new_net.set_policy_smoothing(0.02f);
 
         for (int epoch = 0; epoch < epochs; ++epoch) {
-            int batch_size = std::min(8192, (int)replay_buffer.size());
+            int batch_size = std::min(16384, (int)replay_buffer.size());
             std::vector<int> indices(replay_buffer.size());
             std::iota(indices.begin(), indices.end(), 0);
             std::shuffle(indices.begin(), indices.end(), rng);
@@ -628,19 +634,13 @@ int main() {
 
             for (int i = 0; i < batch_size; i++) {
                 auto& sample = replay_buffer[indices[i]];
-                for (int rot = 0; rot < 4; ++rot) {
-                    for (int mirror = 0; mirror < 2; ++mirror) {
-                        TrainingSample aug = sample;
-                        apply_transform(aug.features, aug.pi, rot, mirror);
-                        Matrix input(1, 648);
-                        for (int j = 0; j < 648; ++j) input.at(0, j) = aug.features[j];
-                        total_loss += new_net.train(input, aug.pi, aug.z, opt);
-                    }
-                }
+                Matrix input(1, 648);
+                for (int j = 0; j < 648; ++j) input.at(0, j) = sample.features[j];
+                total_loss += new_net.train(input, sample.pi, sample.z, opt);
             }
 
             std::cout << "Iter " << iter << " Epoch " << epoch
-                      << " avg loss: " << total_loss / (batch_size * 8) << "\n";
+                      << " avg loss: " << total_loss / (batch_size) << "\n";
         }
 
         std::cout << "Sample weight: " << new_net.layer1.W.at(0,0) << "\n";
