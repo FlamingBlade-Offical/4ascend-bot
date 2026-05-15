@@ -1,0 +1,473 @@
+apple@appledeMacBook-Pro-2 4ascend-bot % ./train
+Loaded existing network.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 0
+Generate new data siz : 99192
+Iter 0 Epoch 0 avg loss: 4.92958
+Iter 0 Epoch 1 avg loss: 4.92387
+Iter 0 Epoch 2 avg loss: 4.9299
+Sample weight: -0.0162313
+New net policy entropy: 4.32239
+Best net policy entropy: 4.31872
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.215, (White) win rate: 0.655
+Overall: 0.435  MinSide: 0.215  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 99192
+Generate new data siz : 94016
+Iter 1 Epoch 0 avg loss: 4.93253
+Iter 1 Epoch 1 avg loss: 4.92474
+Iter 1 Epoch 2 avg loss: 4.9236
+Sample weight: -0.0162313
+New net policy entropy: 4.32946
+Best net policy entropy: 4.31872
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.445, (White) win rate: 0.675
+Overall: 0.56  MinSide: 0.445  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 193208
+Generate new data siz : 96080
+Iter 2 Epoch 0 avg loss: 4.93216
+Iter 2 Epoch 1 avg loss: 4.92967
+Iter 2 Epoch 2 avg loss: 4.92959
+Sample weight: -0.0162313
+New net policy entropy: 4.32577
+Best net policy entropy: 4.31872
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.515, (White) win rate: 0.645
+Overall: 0.58  MinSide: 0.515  Threshold: 0.55  FloorSide: 0.45
+Network saved to best_net.bin
+Backup saved to net/best_net_iter_2.bin
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 289288
+Generate new data siz : 101384
+Iter 3 Epoch 0 avg loss: 4.93147
+Iter 3 Epoch 1 avg loss: 4.92871
+Iter 3 Epoch 2 avg loss: 4.92864
+Sample weight: -0.0162313
+New net policy entropy: 4.32543
+Best net policy entropy: 4.32577
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.45, (White) win rate: 0.595
+Overall: 0.5225  MinSide: 0.45  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 390672
+Generate new data siz : 103096
+Iter 4 Epoch 0 avg loss: 4.92702
+Iter 4 Epoch 1 avg loss: 4.92765
+Iter 4 Epoch 2 avg loss: 4.92749
+Sample weight: -0.0162313
+New net policy entropy: 4.32626
+Best net policy entropy: 4.32577
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.35, (White) win rate: 0.505
+Overall: 0.4275  MinSide: 0.35  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 101008
+Iter 5 Epoch 0 avg loss: 4.92968
+Iter 5 Epoch 1 avg loss: 4.92781
+Iter 5 Epoch 2 avg loss: 4.92552
+Sample weight: -0.0162313
+New net policy entropy: 4.32609
+Best net policy entropy: 4.32577
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.475, (White) win rate: 0.66
+Overall: 0.5675  MinSide: 0.475  Threshold: 0.55  FloorSide: 0.45
+Network saved to best_net.bin
+Backup saved to net/best_net_iter_5.bin
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 91248
+Iter 6 Epoch 0 avg loss: 4.92473
+Iter 6 Epoch 1 avg loss: 4.92351
+Iter 6 Epoch 2 avg loss: 4.92359
+Sample weight: -0.0162313
+New net policy entropy: 4.32932
+Best net policy entropy: 4.32609
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.46, (White) win rate: 0.49
+Overall: 0.475  MinSide: 0.46  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 89920
+Iter 7 Epoch 0 avg loss: 4.93027
+Iter 7 Epoch 1 avg loss: 4.92677
+Iter 7 Epoch 2 avg loss: 4.92641
+Sample weight: -0.0162313
+New net policy entropy: 4.33278
+Best net policy entropy: 4.32609
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.385, (White) win rate: 0.785
+Overall: 0.585  MinSide: 0.385  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 94256
+Iter 8 Epoch 0 avg loss: 4.93185
+Iter 8 Epoch 1 avg loss: 4.93105
+Iter 8 Epoch 2 avg loss: 4.92801
+Sample weight: -0.0162313
+New net policy entropy: 4.33778
+Best net policy entropy: 4.32609
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.36, (White) win rate: 0.8
+Overall: 0.58  MinSide: 0.36  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 94000
+Iter 9 Epoch 0 avg loss: 4.93275
+Iter 9 Epoch 1 avg loss: 4.93
+Iter 9 Epoch 2 avg loss: 4.92835
+Sample weight: -0.0162313
+New net policy entropy: 4.33973
+Best net policy entropy: 4.32609
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.34, (White) win rate: 0.595
+Overall: 0.4675  MinSide: 0.34  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 95864
+Iter 10 Epoch 0 avg loss: 4.93485
+Iter 10 Epoch 1 avg loss: 4.92984
+Iter 10 Epoch 2 avg loss: 4.92946
+Sample weight: -0.0162313
+New net policy entropy: 4.34182
+Best net policy entropy: 4.32609
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.32, (White) win rate: 0.69
+Overall: 0.505  MinSide: 0.32  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 92312
+Iter 11 Epoch 0 avg loss: 4.9313
+Iter 11 Epoch 1 avg loss: 4.93007
+Iter 11 Epoch 2 avg loss: 4.92984
+Sample weight: -0.0162313
+New net policy entropy: 4.34112
+Best net policy entropy: 4.32609
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.365, (White) win rate: 0.415
+Overall: 0.39  MinSide: 0.365  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 91232
+Iter 12 Epoch 0 avg loss: 4.93536
+Iter 12 Epoch 1 avg loss: 4.93003
+Iter 12 Epoch 2 avg loss: 4.92624
+Sample weight: -0.0162313
+New net policy entropy: 4.34114
+Best net policy entropy: 4.32609
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.48, (White) win rate: 0.62
+Overall: 0.55  MinSide: 0.48  Threshold: 0.55  FloorSide: 0.45
+Network saved to best_net.bin
+Backup saved to net/best_net_iter_12.bin
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 87856
+Iter 13 Epoch 0 avg loss: 4.919
+Iter 13 Epoch 1 avg loss: 4.91045
+Iter 13 Epoch 2 avg loss: 4.90686
+Sample weight: -0.0162313
+New net policy entropy: 4.33477
+Best net policy entropy: 4.34114
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.52, (White) win rate: 0.585
+Overall: 0.5525  MinSide: 0.52  Threshold: 0.55  FloorSide: 0.45
+Network saved to best_net.bin
+Backup saved to net/best_net_iter_13.bin
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 99320
+Iter 14 Epoch 0 avg loss: 4.88359
+Iter 14 Epoch 1 avg loss: 4.87714
+Iter 14 Epoch 2 avg loss: 4.86857
+Sample weight: -0.0162313
+New net policy entropy: 4.33221
+Best net policy entropy: 4.33477
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.64, (White) win rate: 0.69
+Overall: 0.665  MinSide: 0.64  Threshold: 0.55  FloorSide: 0.45
+Network saved to best_net.bin
+Backup saved to net/best_net_iter_14.bin
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 103000
+Iter 15 Epoch 0 avg loss: 4.85242
+Iter 15 Epoch 1 avg loss: 4.8459
+Iter 15 Epoch 2 avg loss: 4.83874
+Sample weight: -0.0162313
+New net policy entropy: 4.31579
+Best net policy entropy: 4.33221
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.625, (White) win rate: 0.555
+Overall: 0.59  MinSide: 0.555  Threshold: 0.55  FloorSide: 0.45
+Network saved to best_net.bin
+Backup saved to net/best_net_iter_15.bin
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 111600
+Iter 16 Epoch 0 avg loss: 4.79869
+Iter 16 Epoch 1 avg loss: 4.78359
+Iter 16 Epoch 2 avg loss: 4.77717
+Sample weight: -0.0162313
+New net policy entropy: 4.28559
+Best net policy entropy: 4.31579
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.35, (White) win rate: 0.425
+Overall: 0.3875  MinSide: 0.35  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 115480
+Iter 17 Epoch 0 avg loss: 4.75954
+Iter 17 Epoch 1 avg loss: 4.74549
+Iter 17 Epoch 2 avg loss: 4.7434
+Sample weight: -0.0162313
+New net policy entropy: 4.13271
+Best net policy entropy: 4.31579
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.295, (White) win rate: 0.295
+Overall: 0.295  MinSide: 0.295  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 111248
+Iter 18 Epoch 0 avg loss: 4.73746
+Iter 18 Epoch 1 avg loss: 4.71838
+Iter 18 Epoch 2 avg loss: 4.70673
+Sample weight: -0.0162313
+New net policy entropy: 4.25655
+Best net policy entropy: 4.31579
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.535, (White) win rate: 0.49
+Overall: 0.5125  MinSide: 0.49  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 114224
+Iter 19 Epoch 0 avg loss: 4.71904
+Iter 19 Epoch 1 avg loss: 4.70035
+Iter 19 Epoch 2 avg loss: 4.69009
+Sample weight: -0.0162313
+New net policy entropy: 4.09929
+Best net policy entropy: 4.31579
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.61, (White) win rate: 0.7
+Overall: 0.655  MinSide: 0.61  Threshold: 0.55  FloorSide: 0.45
+Network saved to best_net.bin
+Backup saved to net/best_net_iter_19.bin
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 136832
+Iter 20 Epoch 0 avg loss: 4.67299
+Iter 20 Epoch 1 avg loss: 4.6712
+Iter 20 Epoch 2 avg loss: 4.66788
+Sample weight: -0.0162313
+New net policy entropy: 4.14544
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.405, (White) win rate: 0.475
+Overall: 0.44  MinSide: 0.405  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 139000
+Iter 21 Epoch 0 avg loss: 4.65852
+Iter 21 Epoch 1 avg loss: 4.63847
+Iter 21 Epoch 2 avg loss: 4.63341
+Sample weight: -0.0162313
+New net policy entropy: 3.83669
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.16, (White) win rate: 0.27
+Overall: 0.215  MinSide: 0.16  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 133192
+Iter 22 Epoch 0 avg loss: 4.60328
+Iter 22 Epoch 1 avg loss: 4.57967
+Iter 22 Epoch 2 avg loss: 4.566
+Sample weight: -0.0162313
+New net policy entropy: 3.14868
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.295, (White) win rate: 0.295
+Overall: 0.295  MinSide: 0.295  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 132720
+Iter 23 Epoch 0 avg loss: 4.59486
+Iter 23 Epoch 1 avg loss: 4.57354
+Iter 23 Epoch 2 avg loss: 4.56756
+Sample weight: -0.0162313
+New net policy entropy: 3.1514
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.33, (White) win rate: 0.6
+Overall: 0.465  MinSide: 0.33  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 139176
+Iter 24 Epoch 0 avg loss: 4.60698
+Iter 24 Epoch 1 avg loss: 4.58858
+Iter 24 Epoch 2 avg loss: 4.56891
+Sample weight: -0.0162313
+New net policy entropy: 3.18274
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.17, (White) win rate: 0.265
+Overall: 0.2175  MinSide: 0.17  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 135648
+Iter 25 Epoch 0 avg loss: 4.59638
+Iter 25 Epoch 1 avg loss: 4.58064
+Iter 25 Epoch 2 avg loss: 4.56315
+Sample weight: -0.0162313
+New net policy entropy: 3.07809
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.38, (White) win rate: 0.425
+Overall: 0.4025  MinSide: 0.38  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 134344
+Iter 26 Epoch 0 avg loss: 4.58284
+Iter 26 Epoch 1 avg loss: 4.56527
+Iter 26 Epoch 2 avg loss: 4.55509
+Sample weight: -0.0162313
+New net policy entropy: 3.23813
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.24, (White) win rate: 0.36
+Overall: 0.3  MinSide: 0.24  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 139344
+Iter 27 Epoch 0 avg loss: 4.59145
+Iter 27 Epoch 1 avg loss: 4.55847
+Iter 27 Epoch 2 avg loss: 4.54939
+Sample weight: -0.0162313
+New net policy entropy: 2.97269
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.33, (White) win rate: 0.41
+Overall: 0.37  MinSide: 0.33  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 137152
+Iter 28 Epoch 0 avg loss: 4.5948
+Iter 28 Epoch 1 avg loss: 4.56251
+Iter 28 Epoch 2 avg loss: 4.56173
+Sample weight: -0.0162313
+New net policy entropy: 3.16305
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.255, (White) win rate: 0.5
+Overall: 0.3775  MinSide: 0.255  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 129480
+Iter 29 Epoch 0 avg loss: 4.58913
+Iter 29 Epoch 1 avg loss: 4.5688
+Iter 29 Epoch 2 avg loss: 4.56201
+Sample weight: -0.0162313
+New net policy entropy: 2.69093
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.34, (White) win rate: 0.44
+Overall: 0.39  MinSide: 0.34  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 136088
+Iter 30 Epoch 0 avg loss: 4.59181
+Iter 30 Epoch 1 avg loss: 4.57517
+Iter 30 Epoch 2 avg loss: 4.5662
+Sample weight: -0.0162313
+New net policy entropy: 3.01626
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.26, (White) win rate: 0.47
+Overall: 0.365  MinSide: 0.26  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 135352
+Iter 31 Epoch 0 avg loss: 4.59266
+Iter 31 Epoch 1 avg loss: 4.5806
+Iter 31 Epoch 2 avg loss: 4.55822
+Sample weight: -0.0162313
+New net policy entropy: 2.83943
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.25, (White) win rate: 0.26
+Overall: 0.255  MinSide: 0.25  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [==============================] 100% (240/240)
+Buffer siz : 400000
+Generate new data siz : 131200
+Iter 32 Epoch 0 avg loss: 4.60336
+Iter 32 Epoch 1 avg loss: 4.58379
+Iter 32 Epoch 2 avg loss: 4.57594
+Sample weight: -0.0162313
+New net policy entropy: 2.80561
+Best net policy entropy: 4.09929
+Eval       [==============================] 100% (400/400)
+New net (Black) win rate: 0.29, (White) win rate: 0.5
+Overall: 0.395  MinSide: 0.29  Threshold: 0.55  FloorSide: 0.45
+Network rejected.
+Best net initial weight: -0.0162313
+Self-Play [=>                            ]   5% (14/240)
